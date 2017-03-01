@@ -100,4 +100,4 @@ That is when the function returns NULL
 
 `_parseJSON` is the internal `static` implementation not to be used outside the library
 
-### If this helped you in any way you can buy me a beer
+### If this helped you in any way you can buy me a beer at [PayPal](https://www.paypal.me/suhelchakraborty "Buy me a beer")
