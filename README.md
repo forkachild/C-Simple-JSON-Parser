@@ -8,6 +8,11 @@
  * Count of Key-Value pairs of current JSON
  * Recursive JSON parsing
  * JSONValue is a union whose type is stored as JSONValueType enum in its JSONPair
+ * __BONUS__ string, bool and character data types introduced
+
+### Setup
+
+Extremely simple setup. Just __copy__ `json.h` and `json.c` in your source folder and `#include "json.h"` in your source file
 
 ### Usage
 
