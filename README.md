@@ -1,4 +1,4 @@
-# C-Simple-JSON-Parser
+# Simple JSON Parser in C
 
 ## Extremely simple JSON Parser library written in C
 
