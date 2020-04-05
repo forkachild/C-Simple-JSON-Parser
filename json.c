@@ -86,6 +86,9 @@ static JSONObject * _parseJSON(string str, int * offset) {
             removeWhitespaceCalcOffset(str, _offset);
             
             if(*str == '{') {
+                int _offsetBeforeParsingChildObject = _offset;
+                int _sizeOfChildObject;
+
                 tempPtr.value = new(JSONValue);
                 tempPtr.type = JSON_OBJECT;
                 tempPtr.value->jsonObject = _parseJSON(str, &_offset);
@@ -93,7 +96,9 @@ static JSONObject * _parseJSON(string str, int * offset) {
                     freeJSONFromMemory(obj);
                     return NULL;
                 }
-                str += _offset;
+                // Advance the string pointer by the size of the processed child object
+                _sizeOfChildObject = _offset - _offsetBeforeParsingChildObject;
+                str += _sizeOfChildObject;
             } else if(*str == '"') {
                 i = strNextOccurence(++str, '"');
                 if(i == -1) {
