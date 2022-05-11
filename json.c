@@ -25,6 +25,8 @@ void freeJSONFromMemory(JSONObject *obj) {
                 case JSON_STRING:
                     free(obj->pairs[i].value->stringValue);
                     break;
+                case JSON_DOUBLE:
+                    break;
                 case JSON_OBJECT:
                     freeJSONFromMemory(obj->pairs[i].value->jsonObject);
             }
@@ -41,6 +43,19 @@ static int strNextOccurence(string str, char ch) {
         return -1;
     
     while(*str != ch && *str != '\0') {
+        str++;
+        pos++;
+    }
+    return (*str == '\0') ? -1 : pos;
+}
+
+static int strNextNonNumeral(string str) {
+    int pos = 0;
+
+    if(str == NULL)
+        return -1;
+
+    while(isNumeral(*str) && *str != '\0') {
         str++;
         pos++;
     }
@@ -112,6 +127,23 @@ static JSONObject * _parseJSON(string str, int * offset) {
                 tempPtr.value->stringValue[i] = '\0';
                 str += i + 1;
                 _offset += i + 2;
+            } else if(isNumeral(*str)) {
+                i = strNextNonNumeral(str);
+                if(i == -1) {
+                    freeJSONFromMemory(obj);
+                    return NULL;
+                }
+                string tempStr = newWithSize(character, i + 1);
+                memcpy(tempStr, str, i * sizeof(character));
+                tempStr[i] = '\0';
+
+                tempPtr.value = new(JSONValue);
+                tempPtr.type = JSON_DOUBLE;
+                tempPtr.value->doubleValue = atof(tempStr);
+
+                free(tempStr);
+                str += i;
+                _offset += i + 1;
             }
             obj->pairs[obj->count - 1] = tempPtr;
             

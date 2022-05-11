@@ -43,19 +43,21 @@ Value: world
 ```C
 #include "json.h"
 
-char * complexJson = "{\"name":{\"first\":\"John\",\"last\":\"Doe\"},\"age\":\"21\"}";
+char * complexJson = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"age\":21.5}";
 
 int main(int argc, const char * argv[]) {
-  JSONObject *json = parseJSON(complexJsonString);
+  JSONObject *json = parseJSON(complexJson);
   JSONObject *nameJson = json->pairs[0].value->jsonObject;
-  printf("First name: %s\nLast name: %s\n", nameJson->pairs[0]->value.stringValue, nameJson->pairs[1]->value.stringValue);
+  printf("First name: %s\nLast name: %s Age: %f\n", nameJson->pairs[0].value->stringValue,
+                                                    nameJson->pairs[1].value->stringValue,
+                                                    json->pairs[1].value->doubleValue);
   return 0;
 }
 ```
 
 ### FAQs
 
-#### How to know whether the current value is a String or JSON?
+#### How to know whether the current value is a String, Double or JSON?
 
 At each Key-Value `JSONPair` pair, there is a member named `type`
 
@@ -67,6 +69,8 @@ At each Key-Value `JSONPair` pair, there is a member named `type`
 JSONObject *json = parseJSON(someJsonString);
 if(json->pairs[0].type == JSON_STRING) {
   // String value
+} else if(json->pairs[0].type == JSON_DOUBLE) {
+  // Double precision floating point value
 } else {
   // JSON object
 }
