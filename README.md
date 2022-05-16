@@ -3,16 +3,16 @@
 ## Features
 
  * Simple interface
-   * `json_parse`: Parse a JSON string into a `json_object_t`
-   * `json_print`: Print a `json_object_t` using specified indentation
-   * `json_free`: Free a `json_object_t` from memory
+   * `json_parse`: Parse a JSON string into a `json_object_t *`
+   * `json_print`: Print a `json_object_t *` using specified indentation
+   * `json_free`: Free a `json_object_t *` from memory
  * Support for maximum data types
    * `String`
    * `Number`
    * `Object`
    * `Array`
    * `Boolean`
-   * `Null` _(Omitted from end result)_
+   * `Null` _(omitted from end result)_
  * Systematically structured data types
    * Basic JSON types:
      * String: `json_string_t` (Sugar for `const char *`)
@@ -28,19 +28,31 @@
      * `JSON_TYPE_BOOLEAN`
      * `JSON_TYPE_NULL` _(only as an indicator)_
    * Key-Value Pair: `json_entry_t`
-     * `.type`: `json_type_t` enum tag
-     * `.value`: `json_value_t` union value
-   * Union: `json_value_t` (Conglomerate of Basic JSON types) with easy to use fields
-     * `.as_string`: `json_string_t` value
-     * `.as_number`: `json_number_t` value
-     * `.as_object`: `json_object_t *` value
-     * `.as_array`: `json_array_t *` value
-     * `.as_boolean`: `json_boolean_t` value
- * **Value or Error** `result` type used throughout fallible calls
+     * `type`: Enum `json_type_t` tag
+     * `value`: Union `json_value_t` value
+   * Union: `json_value_t` with easy to interpret fields
+     * `as_string`: As `json_string_t` value
+     * `as_number`: As `json_number_t` value
+     * `as_object`: As `json_object_t *` value
+     * `as_array`: As `json_array_t *` value
+     * `as_boolean`: As `json_boolean_t` value
+ * **Value or Error** (Rust like) `result` type used throughout fallible calls
  * Recursive parsing
  * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
 
 ## Setup
+
+Copy the following from this repository in your source
+
+ * `json.h`
+ * `json_types.h`
+ * `json.c`
+
+And in your code
+
+```C
+#include "json.h"
+```
 
 Extremely simple setup. Just __copy__ `json.h`, `json_types.h` and `json.c` in your source folder and `#include "json.h"` in your source file
 
@@ -48,9 +60,9 @@ Extremely simple setup. Just __copy__ `json.h`, `json_types.h` and `json.c` in y
 
 ### Example
 
-  1. Clone this repository
-  2. Compile the example `clang example.c json.c -o example.out`
-  3. Run the binary `./example.out`
+ 1. Clone this repository
+ 2. Compile the example `clang example.c json.c -o example.out`
+ 3. Run the binary `./example.out`
 
 ### Basic
 
@@ -101,9 +113,9 @@ Age: 21.5
 
 ## FAQs
 
-#### How to know the type?
+### How to know the type?
 
-At each Key-Value pair `json_entry_t`, there is a member `.type`
+At each Key-Value pair `json_entry_t`, there is a member `type`
 
 ```C
 #include "json.h"
@@ -120,10 +132,10 @@ switch(entry.type) {
     // `entry.value.as_number` is a `json_number_t`
     break;
   case JSON_TYPE_OBJECT:
-    // `entry.value.as_object` is a `json_object_t`
+    // `entry.value.as_object` is a `json_object_t *`
     break;
   case JSON_TYPE_ARRAY:
-    // `entry.value.as_array` is a `json_array_t`
+    // `entry.value.as_array` is a `json_array_t *`
     break;
   case JSON_TYPE_BOOLEAN:
     // `entry.value.as_boolean` is a `json_boolean_t`
@@ -131,9 +143,9 @@ switch(entry.type) {
 }
 ```
 
-#### How to get the count of number of Key-Value pairs
+### How to get the count of number of Key-Value pairs?
 
-At each `json_object_t` point, there is a member named `count`
+In each `json_object_t`, there is a member `count`
 
 ```C
 #include "json.h"
@@ -143,7 +155,31 @@ At each `json_object_t` point, there is a member named `count`
 int i;
 json_object_t *json = json_parse(some_json_string);
 for(i = 0; i < json->count; i++) {
-  // Do something
+  json_entry_t entry = json->entries[i];
+
+  json_string_t key = entry.key;
+  json_type_t type = entry.type;
+  json_value_t value = entry.value;
+  // Do something with `key`, `type` and `value`
+}
+```
+
+### How to get the number of elements in an array?
+
+In each `json_array_t`, there is a member `count`
+
+```C
+#include "json.h"
+
+...
+
+int i;
+json_object_t *json = json_parse(some_json_string);
+json_array_t *array = json->entries[0].value.as_array;
+json_type_t type = array->type;
+for(i = 0; i < array->count; i++) {
+  json_value_t value = array->values[i];
+  // Do something with `value`
 }
 ```
 
