@@ -1,7 +1,8 @@
+#include "example.h"
+
 #include <stdio.h>
 
 #include "json.h"
-#include "sample.h"
 
 int main() {
     json_object_t *object = json_parse(json);

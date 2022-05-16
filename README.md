@@ -1,32 +1,68 @@
 # Simple JSON Parser in C
 
-## Extremely simple JSON Parser library written in C
+## Features
 
-### Features
+ * Simple interface
+   * `json_parse`: Parse a JSON string into a `json_object_t`
+   * `json_print`: Print a `json_object_t` using specified indentation
+   * `json_free`: Free a `json_object_t` from memory
+ * Support for maximum data types
+   * `String`
+   * `Number`
+   * `Object`
+   * `Array`
+   * `Boolean`
+   * `Null` _(Omitted from end result)_
+ * Systematically structured data types
+   * Basic JSON types:
+     * String: `json_string_t` (Sugar for `const char *`)
+     * Number: `json_number_t` (Sugar for `double`)
+     * Object: `json_object_t` (Array of `json_entry_t`)
+     * Array: `json_array_t` (Typed array of `json_value_t`)
+     * Boolean: `json_boolean_t` (Sugar for `unsigned char`)
+   * Tag type: `json_type_t` with possible values
+     * `JSON_TYPE_STRING`
+     * `JSON_TYPE_NUMBER`
+     * `JSON_TYPE_OBJECT`
+     * `JSON_TYPE_ARRAY`
+     * `JSON_TYPE_BOOLEAN`
+     * `JSON_TYPE_NULL` _(only as an indicator)_
+   * Key-Value Pair: `json_entry_t`
+     * `.type`: `json_type_t` enum tag
+     * `.value`: `json_value_t` union value
+   * Union: `json_value_t` (Conglomerate of Basic JSON types) with easy to use fields
+     * `.as_string`: `json_string_t` value
+     * `.as_number`: `json_number_t` value
+     * `.as_object`: `json_object_t *` value
+     * `.as_array`: `json_array_t *` value
+     * `.as_boolean`: `json_boolean_t` value
+ * **Value or Error** `result` type used throughout fallible calls
+ * Recursive parsing
+ * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
 
- * Structured data (JSONObject, JSONPair, JSONValue)
- * Count of Key-Value pairs of current JSON
- * Recursive JSON parsing
- * JSONValue is a union whose type is stored as JSONValueType enum in its JSONPair
- * __BONUS__ string, bool and character data types introduced
+## Setup
 
-### Setup
+Extremely simple setup. Just __copy__ `json.h`, `json_types.h` and `json.c` in your source folder and `#include "json.h"` in your source file
 
-Extremely simple setup. Just __copy__ `json.h` and `json.c` in your source folder and `#include "json.h"` in your source file
+## Usage
 
-### Usage
+### Example
 
-#### Basic
+  1. Clone this repository
+  2. Compile the example `clang example.c json.c -o example.out`
+  3. Run the binary `./example.out`
+
+### Basic
 
 ```C
 #include "json.h"
 
-char * someJsonString = "{\"hello\":\"world\",\"key\":\"value\"}";
+const char * some_json_string = "{\"hello\":\"world\",\"key\":\"value\"}";
 
 int main(int argc, const char * argv[]) {
-  JSONObject *json = parseJSON(someJsonString);
+  json_object_t *json = json_parse(some_json_string);
   printf("Count: %i\n", json->count);
-  printf("Key: %s, Value: %s\n", json->pairs[0].key, json->pairs[0].value->stringValue);
+  printf("Key: %s\nValue: %s", json->entries[0].type, json->entries[0].value.as_string);
   return 0;
 }
 ```
@@ -43,42 +79,61 @@ Value: world
 ```C
 #include "json.h"
 
-char * complexJson = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"age\":21.5}";
+const char * complex_json = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"age\":21.5}";
 
 int main(int argc, const char * argv[]) {
-  JSONObject *json = parseJSON(complexJson);
-  JSONObject *nameJson = json->pairs[0].value->jsonObject;
-  printf("First name: %s\nLast name: %s Age: %f\n", nameJson->pairs[0].value->stringValue,
-                                                    nameJson->pairs[1].value->stringValue,
-                                                    json->pairs[1].value->doubleValue);
+  json_object *json = json_parse(complex_json);
+  json_object *name_json = json->entires[0].value.as_object;
+  printf("First name: %s\nLast name: %s\Age: %f",
+    name_json->entries[0].value.as_string,
+    name_json->entries[1].value.as_string,
+    json->entries[1].value.as_number);
   return 0;
 }
+```
+Will output
+
+```
+First name: John
+Last name: Doe
+Age: 21.5
 ```
 
 ### FAQs
 
-#### How to know whether the current value is a String, Double or JSON?
+#### How to know the type?
 
-At each Key-Value `JSONPair` pair, there is a member named `type`
+At each Key-Value pair `json_entry_t`, there is a member `.type`
 
 ```C
 #include "json.h"
 
 ...
 
-JSONObject *json = parseJSON(someJsonString);
-if(json->pairs[0].type == JSON_STRING) {
-  // String value
-} else if(json->pairs[0].type == JSON_DOUBLE) {
-  // Double precision floating point value
-} else {
-  // JSON object
+json_object_t *json = json_parse(some_json_string);
+json_entry_t entry = json->entries[0];
+switch(entry.type) {
+  case JSON_TYPE_STRING:
+    // `entry.value` is a `json_string_t`
+    break;
+  case JSON_TYPE_NUMBER:
+    // `entry.value` is a `json_number_t`
+    break;
+  case JSON_TYPE_OBJECT:
+    // `entry.value` is a `json_object_t`
+    break;
+  case JSON_TYPE_ARRAY:
+    // `entry.value` is a `json_array_t`
+    break;
+  case JSON_TYPE_BOOLEAN:
+    // `entry.value` is a `json_boolean_t`
+    break;
 }
 ```
 
 #### How to get the count of number of Key-Value pairs
 
-At each `JSONObject` point, there is a member named `count`
+At each `json_object_t` point, there is a member named `count`
 
 ```C
 #include "json.h"
@@ -86,22 +141,18 @@ At each `JSONObject` point, there is a member named `count`
 ...
 
 int i;
-JSONObject *json = parseJSON(someJsonString);
+json_object_t *json = json_parse(some_json_string);
 for(i = 0; i < json->count; i++) {
   // Do something
 }
 ```
 
-#### What if JSON is poorly formatted with uneven whitespace
+### What if the JSON is poorly formatted with uneven whitespace
 
-Well, that is not a problem for this library
+Compile using `-DJSON_SCRAPE_WHITESPACE`
 
-#### What if there is error in JSON
+### What if there is error in JSON
 
-That is when the function returns NULL
+That is when `json_parse` returns `NULL`
 
-#### What is `_parseJSON` and how is it different from `parseJSON`
-
-`_parseJSON` is the internal `static` implementation not to be used outside the library
-
-### If this helped you in any way you can buy me a beer at [PayPal](https://www.paypal.me/suhelchakraborty "Buy me a beer")
+## If this helped you in any way you can [buy me a beer](https://www.paypal.me/suhelchakraborty)
