@@ -54,8 +54,6 @@ And in your code
 #include "json.h"
 ```
 
-Extremely simple setup. Just __copy__ `json.h`, `json_types.h` and `json.c` in your source folder and `#include "json.h"` in your source file
-
 ## Usage
 
 ### Example
