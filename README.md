@@ -99,7 +99,7 @@ Last name: Doe
 Age: 21.5
 ```
 
-### FAQs
+## FAQs
 
 #### How to know the type?
 
@@ -114,19 +114,19 @@ json_object_t *json = json_parse(some_json_string);
 json_entry_t entry = json->entries[0];
 switch(entry.type) {
   case JSON_TYPE_STRING:
-    // `entry.value` is a `json_string_t`
+    // `entry.value.as_string` is a `json_string_t`
     break;
   case JSON_TYPE_NUMBER:
-    // `entry.value` is a `json_number_t`
+    // `entry.value.as_number` is a `json_number_t`
     break;
   case JSON_TYPE_OBJECT:
-    // `entry.value` is a `json_object_t`
+    // `entry.value.as_object` is a `json_object_t`
     break;
   case JSON_TYPE_ARRAY:
-    // `entry.value` is a `json_array_t`
+    // `entry.value.as_array` is a `json_array_t`
     break;
   case JSON_TYPE_BOOLEAN:
-    // `entry.value` is a `json_boolean_t`
+    // `entry.value.as_boolean` is a `json_boolean_t`
     break;
 }
 ```
