@@ -1,3 +1,2 @@
-
-test : main.c json.c
-	gcc main.c json.c -o app.out && ./app.out
+example: example.c json.c
+	$(CC) example.c json.c -O3 -o bin/example.out
