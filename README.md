@@ -54,15 +54,30 @@ And in your code
 #include "json.h"
 ```
 
-## Usage
+## Interface
 
-### Example
+### Parse a JSON String
 
- 1. Clone this repository
- 2. Compile the example `clang example.c json.c -o example.out`
- 3. Run the binary `./example.out`
+```C
+// `json_string_t` is sugar for `const char *`
+json_object_t *json_parse(json_string_t json_str);
+```
 
-### Basic
+### Print a JSON Object
+
+```C
+void json_print(json_object *obj);
+```
+
+### Free a JSON Object from memory
+
+```C
+void json_free(json_object *obj);
+```
+
+## Guide
+
+### Single level parsing
 
 ```C
 #include "json.h"
@@ -76,15 +91,15 @@ int main() {
   return 0;
 }
 ```
-Will output
+Outputs
 
-```
+```bash
 Count: 2
 Key: hello
 Value: world
 ```
 
-#### Recursive
+### Recursive Parsing
 
 ```C
 #include "json.h"
@@ -101,13 +116,19 @@ int main() {
   return 0;
 }
 ```
-Will output
+Outputs
 
-```
+```bash
 First name: John
 Last name: Doe
 Age: 21.5
 ```
+
+### Example in repository
+
+ 1. Clone this repository `git clone https://github.com/forkachild/C-Simple-JSON-Parser`
+ 2. Compile the example `clang example.c json.c -o example.out`
+ 3. Run the binary `./example.out`
 
 ## FAQs
 
