@@ -69,7 +69,7 @@ And in your code
 
 const char * some_json_string = "{\"hello\":\"world\",\"key\":\"value\"}";
 
-int main(int argc, const char * argv[]) {
+int main() {
   json_object_t *json = json_parse(some_json_string);
   printf("Count: %i\n", json->count);
   printf("Key: %s\nValue: %s", json->entries[0].type, json->entries[0].value.as_string);
@@ -91,10 +91,10 @@ Value: world
 
 const char * complex_json = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"age\":21.5}";
 
-int main(int argc, const char * argv[]) {
-  json_object *json = json_parse(complex_json);
-  json_object *name_json = json->entires[0].value.as_object;
-  printf("First name: %s\nLast name: %s\Age: %f",
+int main() {
+  json_object_t *json = json_parse(complex_json);
+  json_object_t *name_json = json->entires[0].value.as_object;
+  printf("First name: %s\nLast name: %s\nAge: %f",
     name_json->entries[0].value.as_string,
     name_json->entries[1].value.as_string,
     json->entries[1].value.as_number);
