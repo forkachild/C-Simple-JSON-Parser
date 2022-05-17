@@ -20,46 +20,46 @@
         typed(json_boolean) is_ok;                           \
         union {                                              \
             typed(name) value;                               \
-            const char *err;                                 \
+            typed(json_string) err;                          \
         } inner;                                             \
     } result(name);                                          \
     result(name) result_ok(name)(typed(name));               \
-    result(name) result_err(name)(const char *);             \
+    result(name) result_err(name)(typed(json_string));       \
     typed(json_boolean) result_is_ok(name)(result(name) *);  \
     typed(json_boolean) result_is_err(name)(result(name) *); \
     typed(name) result_unwrap(name)(result(name) *);         \
-    const char *result_unwrap_err(name)(result(name) *);
+    typed(json_string) result_unwrap_err(name)(result(name) *);
 
-#define define_result_type(name)                                 \
-    result(name) result_ok(name)(typed(name) value) {            \
-        result(name) retval = {                                  \
-            .is_ok = true,                                       \
-            .inner = {                                           \
-                .value = value,                                  \
-            },                                                   \
-        };                                                       \
-        return retval;                                           \
-    }                                                            \
-    result(name) result_err(name)(const char *err) {             \
-        result(name) retval = {                                  \
-            .is_ok = false,                                      \
-            .inner = {                                           \
-                .err = err,                                      \
-            },                                                   \
-        };                                                       \
-        return retval;                                           \
-    }                                                            \
-    json_boolean_t result_is_ok(name)(result(name) * result) {   \
-        return result->is_ok;                                    \
-    }                                                            \
-    json_boolean_t result_is_err(name)(result(name) * result) {  \
-        return !result->is_ok;                                   \
-    }                                                            \
-    typed(name) result_unwrap(name)(result(name) * result) {     \
-        return result->inner.value;                              \
-    }                                                            \
-    const char *result_unwrap_err(name)(result(name) * result) { \
-        return result->inner.err;                                \
+#define define_result_type(name)                                        \
+    result(name) result_ok(name)(typed(name) value) {                   \
+        result(name) retval = {                                         \
+            .is_ok = true,                                              \
+            .inner = {                                                  \
+                .value = value,                                         \
+            },                                                          \
+        };                                                              \
+        return retval;                                                  \
+    }                                                                   \
+    result(name) result_err(name)(typed(json_string) err) {             \
+        result(name) retval = {                                         \
+            .is_ok = false,                                             \
+            .inner = {                                                  \
+                .err = err,                                             \
+            },                                                          \
+        };                                                              \
+        return retval;                                                  \
+    }                                                                   \
+    typed(json_boolean) result_is_ok(name)(result(name) * result) {     \
+        return result->is_ok;                                           \
+    }                                                                   \
+    typed(json_boolean) result_is_err(name)(result(name) * result) {    \
+        return !result->is_ok;                                          \
+    }                                                                   \
+    typed(name) result_unwrap(name)(result(name) * result) {            \
+        return result->inner.value;                                     \
+    }                                                                   \
+    typed(json_string) result_unwrap_err(name)(result(name) * result) { \
+        return result->inner.err;                                       \
     }
 
 #ifndef __cplusplus
