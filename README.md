@@ -66,13 +66,13 @@ json_object_t *json_parse(json_string_t json_str);
 ### Print a JSON Object
 
 ```C
-void json_print(json_object *obj);
+void json_print(json_object_t *obj);
 ```
 
 ### Free a JSON Object from memory
 
 ```C
-void json_free(json_object *obj);
+void json_free(json_object_t *obj);
 ```
 
 ## Guide
