@@ -421,6 +421,10 @@ static result(json_value) json_parse_array(typed(json_string) * str_ptr) {
     // Skip the ']' closing array
     (*str_ptr)++;
 
+    if (count == 0) {
+        return result_err(json_value)(JSON_ERROR_EMPTY);
+    }
+
     typed(json_array) *array = alloc(typed(json_array));
     array->count = count;
     array->type = type;
