@@ -126,9 +126,10 @@ static void json_print_array(typed(json_array) * array, int indent, int indent_l
     printf("[\n");
 
     for (int i = 0; i < array->count; i++) {
+        typed(json_array_element) element = array->elements[i];
         for (int j = 0; j < indent * (indent_level + 1); j++)
             printf(" ");
-        json_print_value(array->type, &array->values[i], indent, indent_level + 1);
+        json_print_value(element.type, &element.value, indent, indent_level + 1);
 
         if (i != array->count - 1)
             printf(",");
@@ -191,10 +192,12 @@ static void json_free_array(typed(json_array) * array) {
         return;
     }
 
-    for (int i = 0; i < array->count; i++)
-        json_free_value(array->type, &array->values[i]);
+    for (int i = 0; i < array->count; i++) {
+        typed(json_array_element) element = array->elements[i];
+        json_free_value(element.type, &element.value);
+    }
 
-    free(array->values);
+    free(array->elements);
     free(array);
 }
 
@@ -388,33 +391,43 @@ static result(json_value) json_parse_array(typed(json_string) * str_ptr) {
 
     json_scrape_whitespace(str_ptr);
 
+    // Unfortunately the array is empty
     if (**str_ptr == ']') {
         // Skip the end ']'
         (*str_ptr)++;
         return result_err(json_value)(JSON_ERROR_EMPTY);
     }
 
-    result_try(json_value, json_type, type, json_guess_value_type(*str_ptr));
-
     typed(size) count = 0;
-    typed(json_value) *values = NULL;
+    typed(json_array_element) *elements = NULL;
 
     while (**str_ptr != '\0') {
         json_scrape_whitespace(str_ptr);
-        result(json_value) value_result = json_parse_value(str_ptr, type);
 
-        if (result_is_ok(json_value)(&value_result)) {
-            count++;
-            values = reallocN(values, typed(json_value), count);
-            typed(json_value) value = result_unwrap(json_value)(&value_result);
-            memcpy(&values[count - 1], &value, sizeof(typed(json_value)));
+        // Guess the type
+        result(json_type) type_result = json_guess_value_type(*str_ptr);
+        if (result_is_ok(json_type)(&type_result)) {
+            typed(json_type) type = result_unwrap(json_type)(&type_result);
+
+            // Parse the value based on guessed type
+            result(json_value) value_result = json_parse_value(str_ptr, type);
+            if (result_is_ok(json_value)(&value_result)) {
+                typed(json_value) value = result_unwrap(json_value)(&value_result);
+
+                count++;
+                elements = reallocN(elements, typed(json_array_element), count);
+                elements[count - 1].type = type;
+                elements[count - 1].value = value;
+            }
+
+            json_scrape_whitespace(str_ptr);
         }
 
-        json_scrape_whitespace(str_ptr);
-
+        // Reached the end
         if (**str_ptr == ']')
             break;
 
+        // Skip the ','
         (*str_ptr)++;
     }
 
@@ -427,8 +440,7 @@ static result(json_value) json_parse_array(typed(json_string) * str_ptr) {
 
     typed(json_array) *array = alloc(typed(json_array));
     array->count = count;
-    array->type = type;
-    array->values = values;
+    array->elements = elements;
 
     return result_ok(json_value)((json_value_t)array);
 }

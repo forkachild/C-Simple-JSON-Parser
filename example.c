@@ -27,7 +27,7 @@ const char *read_file(const char *path) {
 }
 
 int main() {
-    const char *json = read_file("../asteroids.json");
+    const char *json = read_file("../multidim_arr.json");
     if (json == NULL) {
         return -1;
     }

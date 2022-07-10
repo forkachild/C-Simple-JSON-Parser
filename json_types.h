@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #ifndef __cplusplus
 typedef unsigned char bool;
 #define true (1)
@@ -14,6 +16,7 @@ typedef bool typed(json_boolean);
 typedef double typed(json_number);
 typedef struct json_object_s typed(json_object);
 typedef struct json_array_s typed(json_array);
+typedef struct json_array_element_s typed(json_array_element);
 typedef union json_value_u typed(json_value);
 typedef struct json_entry_s typed(json_entry);
 typedef enum json_error_e typed(json_error);
@@ -95,8 +98,7 @@ struct json_object_s {
 
 struct json_array_s {
     typed(size) count;
-    typed(json_type) type;
-    typed(json_value) * values;
+    typed(json_array_element) * elements;
 };
 
 union json_value_u {
@@ -105,6 +107,11 @@ union json_value_u {
     typed(json_object) * as_object;
     typed(json_array) * as_array;
     typed(json_boolean) as_boolean;
+};
+
+struct json_array_element_s {
+    typed(json_type) type;
+    typed(json_value) value;
 };
 
 struct json_entry_s {

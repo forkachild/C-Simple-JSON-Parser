@@ -7,7 +7,6 @@
       "args": [
         "-fdiagnostics-color=always",
         "-g",
-        "-rdynamic",
         "${workspaceFolder}/*.c",
         "-o",
         "${workspaceFolder}/bin/a.out"
