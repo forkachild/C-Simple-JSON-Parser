@@ -26,10 +26,9 @@ static void json_free_object(typed(json_object) *);
 static void json_free_array(typed(json_array) *);
 static void json_skip_whitespace(typed(json_string) *);
 static void json_skip_null(typed(json_string) *);
-static result(size) json_index_of(typed(json_string), char);
 static result(json_value) json_parse_value(typed(json_string) *, typed(json_type));
 static result(json_value) json_parse_string(typed(json_string) *);
-static result(size) json_string_len(typed(json_string));
+static typed(size) json_string_len(typed(json_string));
 static result(json_string) json_parse_escaped_string(typed(json_string), typed(size));
 static result(json_value) json_parse_number(typed(json_string) *);
 static result(json_value) json_parse_object(typed(json_string) *);
@@ -42,7 +41,7 @@ typed(json_object) * json_parse(typed(json_string) json_str) {
     result(json_value) output_result = json_parse_object(&json_str);
 
     if (result_is_err(json_value)(&output_result)) {
-        fprintf(stderr, "Error parsing JSON: %s", result_unwrap_err(json_value)(&output_result));
+        fprintf(stderr, "Error parsing JSON: %s", json_error_to_string(result_unwrap_err(json_value)(&output_result)));
         return NULL;
     }
 
@@ -55,6 +54,22 @@ void json_print(typed(json_object) * object, int indent) {
 
 void json_free(typed(json_object) * object) {
     json_free_object(object);
+}
+
+typed(json_string) json_error_to_string(const typed(json_error) err) {
+    switch (err) {
+        case JSON_ERROR_EMPTY:
+            return "Empty";
+        case JSON_ERROR_INVALID_KEY:
+            return "Invalid key";
+        case JSON_ERROR_INVALID_TYPE:
+            return "Invalid type";
+        case JSON_ERROR_INVALID_VALUE:
+            return "Invalid value";
+
+        default:
+            return "Unknown error";
+    }
 }
 
 static void json_print_value(typed(json_type) type, typed(json_value) * value, int indent, int indent_level) {
@@ -192,26 +207,6 @@ static void json_skip_null(typed(json_string) * str_ptr) {
     (*str_ptr) += 4;
 }
 
-static result(size) json_index_of(typed(json_string) str, char ch) {
-    typed(size) pos = 0;
-
-    while (*str != '\0') {
-        // We are gonna skip past escape sequences for now
-        if (ch == '\\') {
-            str += 2;
-        }
-
-        if (ch == *str) {
-            return result_ok(size)(pos);
-        }
-
-        str++;
-        pos++;
-    }
-
-    return result_err(size)("Not found");
-}
-
 static result(json_value) json_parse_value(typed(json_string) * str_ptr, typed(json_type) type) {
     switch (type) {
         case JSON_TYPE_STRING:
@@ -226,7 +221,7 @@ static result(json_value) json_parse_value(typed(json_string) * str_ptr, typed(j
             return json_parse_boolean(str_ptr);
         case JSON_TYPE_NULL:
             json_skip_null(str_ptr);
-            return result_err(json_value)("Can't parse null");
+            return result_err(json_value)(JSON_ERROR_EMPTY);
     }
 }
 
@@ -234,7 +229,13 @@ static result(json_value) json_parse_string(typed(json_string) * str_ptr) {
     // Skip the first '"' character
     (*str_ptr)++;
 
-    result_try(json_value, size, len, json_string_len(*str_ptr));
+    typed(size) len = json_string_len(*str_ptr);
+    if (len == 0) {
+        // Skip the end quote
+        (*str_ptr)++;
+        return result_err(json_value)(JSON_ERROR_EMPTY);
+    }
+
     result_try(json_value, json_string, output, json_parse_escaped_string(*str_ptr, len));
 
     // Skip to beyond the string
@@ -243,7 +244,7 @@ static result(json_value) json_parse_string(typed(json_string) * str_ptr) {
     return result_ok(json_value)((typed(json_value))output);
 }
 
-static result(size) json_string_len(typed(json_string) str) {
+static typed(size) json_string_len(typed(json_string) str) {
     typed(size) len = 0;
 
     typed(json_string) iter = str;
@@ -259,10 +260,7 @@ static result(size) json_string_len(typed(json_string) str) {
         iter++;
     }
 
-    if (len == 0)
-        return result_err(size)("Invalid size");
-
-    return result_ok(size)(len);
+    return len;
 }
 
 static result(json_string) json_parse_escaped_string(typed(json_string) str, typed(size) len) {
@@ -309,7 +307,7 @@ static result(json_string) json_parse_escaped_string(typed(json_string) str, typ
                     output[offset] = '\\';
                     break;
                 default:
-                    return result_err(json_string)("Invalid escape character");
+                    return result_err(json_string)(JSON_ERROR_INVALID_VALUE);
             }
         } else {
             output[offset] = *iter;
@@ -327,11 +325,8 @@ static result(json_value) json_parse_number(typed(json_string) * str_ptr) {
     errno = 0;
     typed(json_number) number = strtod(*str_ptr, (char **)str_ptr);
 
-    if (errno == EINVAL)
-        return result_err(json_value)("Invalid number");
-
-    if (errno == ERANGE)
-        return result_err(json_value)("Out of range");
+    if (errno == EINVAL || errno == ERANGE)
+        return result_err(json_value)(JSON_ERROR_INVALID_VALUE);
 
     return result_ok(json_value)((typed(json_value))number);
 }
@@ -342,8 +337,11 @@ static result(json_value) json_parse_object(typed(json_string) * str_ptr) {
 
     json_scrape_whitespace(str_ptr);
 
-    if (**str_ptr == '}')
-        return result_err(json_value)("Empty");
+    if (**str_ptr == '}') {
+        // Skip the end '}'
+        (*str_ptr)++;
+        return result_err(json_value)(JSON_ERROR_EMPTY);
+    }
 
     typed(json_entry) *entries = NULL;
     typed(size) count = 0;
@@ -357,7 +355,7 @@ static result(json_value) json_parse_object(typed(json_string) * str_ptr) {
         if (result_is_ok(json_entry)(&entry_result)) {
             count++;
             entries = reallocN(entries, typed(json_entry), count);
-            const typed(json_entry) entry = result_unwrap(json_entry)(&entry_result);
+            typed(json_entry) entry = result_unwrap(json_entry)(&entry_result);
             memcpy(&entries[count - 1], &entry, sizeof(typed(json_entry)));
         }
 
@@ -372,7 +370,7 @@ static result(json_value) json_parse_object(typed(json_string) * str_ptr) {
     }
 
     if (entries == NULL)
-        return result_err(json_value)("No non-null entries");
+        return result_err(json_value)(JSON_ERROR_EMPTY);
 
     // Skip the '}' closing brace
     (*str_ptr)++;
@@ -390,8 +388,11 @@ static result(json_value) json_parse_array(typed(json_string) * str_ptr) {
 
     json_scrape_whitespace(str_ptr);
 
-    if (**str_ptr == ']')
-        return result_err(json_value)("Empty array");
+    if (**str_ptr == ']') {
+        // Skip the end ']'
+        (*str_ptr)++;
+        return result_err(json_value)(JSON_ERROR_EMPTY);
+    }
 
     result_try(json_value, json_type, type, json_guess_value_type(*str_ptr));
 
@@ -405,7 +406,7 @@ static result(json_value) json_parse_array(typed(json_string) * str_ptr) {
         if (result_is_ok(json_value)(&value_result)) {
             count++;
             values = reallocN(values, typed(json_value), count);
-            const typed(json_value) value = result_unwrap(json_value)(&value_result);
+            typed(json_value) value = result_unwrap(json_value)(&value_result);
             memcpy(&values[count - 1], &value, sizeof(typed(json_value)));
         }
 
@@ -460,14 +461,14 @@ static result(json_entry) json_parse_entry(typed(json_string) * str_ptr) {
         free((void *)key.as_string);
         return result_map_err(json_entry, json_type, &type_result);
     }
-    const typed(json_type) type = result_unwrap(json_type)(&type_result);
+    typed(json_type) type = result_unwrap(json_type)(&type_result);
 
     result(json_value) value_result = json_parse_value(str_ptr, type);
     if (result_is_err(json_value)(&value_result)) {
         free((void *)key.as_string);
         return result_map_err(json_entry, json_value, &value_result);
     }
-    const typed(json_value) value = result_unwrap(json_value)(&value_result);
+    typed(json_value) value = result_unwrap(json_value)(&value_result);
 
     typed(json_entry) entry = {
         .key = key.as_string,
@@ -495,7 +496,7 @@ static result(json_type) json_guess_value_type(typed(json_string) str) {
     else if (first_ch == 'n')
         type = JSON_TYPE_NULL;
     else
-        return result_err(json_type)("Invalid type");
+        return result_err(json_type)(JSON_ERROR_INVALID_TYPE);
 
     return result_ok(json_type)(type);
 }
