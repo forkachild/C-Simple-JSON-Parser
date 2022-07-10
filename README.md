@@ -2,40 +2,49 @@
 
 ## Features
 
+ * [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
  * Simple interface
    * `json_parse`: Parse a JSON string into a `json_object_t *`
    * `json_print`: Print a `json_object_t *` using specified indentation
    * `json_free`: Free a `json_object_t *` from memory
- * Support for maximum data types
+ * Support for all data types
    * `String`
    * `Number`
    * `Object`
    * `Array`
    * `Boolean`
    * `Null` _(omitted from end result)_
- * Systematically structured data types
-   * Basic JSON types:
-     * String: `json_string_t` (Sugar for `const char *`)
-     * Number: `json_number_t` (Sugar for `double`)
-     * Object: `json_object_t` (Array of `json_entry_t`)
-     * Array: `json_array_t` (Typed array of `json_value_t`)
-     * Boolean: `json_boolean_t` (Sugar for `unsigned char`)
-   * Tag type: `json_type_t` with possible values
+ * Data types:
+   * `json_string_t`: The `String` type (alias for `const char *`)
+   * `json_number_t`: The `Number` type (alias for `double`)
+   * `json_object_t`: The `Object` type
+     * `count`: Number of entries (as `size_t`)
+     * `entries`: Array of `json_entry_t` of `.count` size
+   * `json_array_t`: The heterogenious `Array` type
+     * `count`: Number of elements (as `size_t`)
+     * `elements`: Array of `json_array_element_t` of `.count` size
+   * `json_boolean_t`: The `Boolean` type (alias for `unsigned char`)
+   * `json_type_t`: An **enum** of basic JSON type
      * `JSON_TYPE_STRING`
      * `JSON_TYPE_NUMBER`
      * `JSON_TYPE_OBJECT`
      * `JSON_TYPE_ARRAY`
      * `JSON_TYPE_BOOLEAN`
      * `JSON_TYPE_NULL` _(only as an indicator)_
-   * Key-Value Pair: `json_entry_t`
-     * `type`: Enum `json_type_t` tag
-     * `value`: Union `json_value_t` value
-   * Union: `json_value_t` with easy to interpret fields
+   * `json_value_t`: The JSON value **union** with easy to interpret fields
      * `as_string`: As `json_string_t` value
      * `as_number`: As `json_number_t` value
      * `as_object`: As `json_object_t *` value
      * `as_array`: As `json_array_t *` value
      * `as_boolean`: As `json_boolean_t` value
+     * **Note**: The `null` type is not represented
+   * `json_entry_t`: The Key-Value entry (used in `json_object_t`)
+     * `key`: The key of the entry (as `json_string_t`)
+     * `type`: The type of data represented `.value` field (as `json_type_t`)
+     * `value`: The value of this entry (as `json_value_t`)
+   * `json_array_element_t`: A typed element of an array (used in `json_array_t`)
+     * `type`: The type of data represented by `.value` field (as `json_type_t`)
+     * `value`: The value of this element (as `json_value_t`)
  * **Value or Error** (Rust like) `result` type used throughout fallible calls
  * Recursive parsing
  * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
@@ -108,7 +117,7 @@ const char * complex_json = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"a
 
 int main() {
   json_object_t *json = json_parse(complex_json);
-  json_object_t *name_json = json->entires[0].value.as_object;
+  json_object_t *name_json = json->entries[0].value.as_object;
   printf("First name: %s\nLast name: %s\nAge: %f",
     name_json->entries[0].value.as_string,
     name_json->entries[1].value.as_string,
@@ -143,6 +152,7 @@ At each Key-Value pair `json_entry_t`, there is a member `type`
 
 json_object_t *json = json_parse(some_json_string);
 json_entry_t entry = json->entries[0];
+
 switch(entry.type) {
   case JSON_TYPE_STRING:
     // `entry.value.as_string` is a `json_string_t`
@@ -172,7 +182,9 @@ In each `json_object_t`, there is a member `count`
 ...
 
 int i;
+
 json_object_t *json = json_parse(some_json_string);
+
 for(i = 0; i < json->count; i++) {
   json_entry_t entry = json->entries[i];
 
@@ -193,11 +205,15 @@ In each `json_array_t`, there is a member `count`
 ...
 
 int i;
+
 json_object_t *json = json_parse(some_json_string);
 json_array_t *array = json->entries[0].value.as_array;
-json_type_t type = array->type;
+
 for(i = 0; i < array->count; i++) {
-  json_value_t value = array->values[i];
+  json_array_element_t element = array->elements[i];
+
+  json_type_t type = element.type;
+  json_value_t value = element.value;
   // Do something with `value`
 }
 ```

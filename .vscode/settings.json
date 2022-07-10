@@ -31,5 +31,8 @@
     "string_view": "c",
     "unordered_map": "c",
     "utility": "c"
+  },
+  "[json]": {
+    "editor.formatOnSave": false
   }
 }

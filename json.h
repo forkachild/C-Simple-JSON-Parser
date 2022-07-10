@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stddef.h>
-
 #include "json_types.h"
 
 declare_result_type(json_value);
