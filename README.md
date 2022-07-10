@@ -39,6 +39,7 @@
      * `as_boolean`: As `json_boolean_t` value
      * **Note**: The `null` type is not represented
    * `json_entry_t`: The Key-Value entry (used in `json_object_t`)
+     * `key`: The key of the entry (as `json_string_t`)
      * `type`: The type of data represented `.value` field (as `json_type_t`)
      * `value`: The value of this entry (as `json_value_t`)
    * `json_array_element_t`: A typed element of an array (used in `json_array_t`)
@@ -116,7 +117,7 @@ const char * complex_json = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"a
 
 int main() {
   json_object_t *json = json_parse(complex_json);
-  json_object_t *name_json = json->entires[0].value.as_object;
+  json_object_t *name_json = json->entries[0].value.as_object;
   printf("First name: %s\nLast name: %s\nAge: %f",
     name_json->entries[0].value.as_string,
     name_json->entries[1].value.as_string,
