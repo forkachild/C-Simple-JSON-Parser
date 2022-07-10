@@ -20,7 +20,7 @@
    * `json_object_t`: The `Object` type
      * `count`: Number of entries (as `size_t`)
      * `entries`: Array of `json_entry_t` of `.count` size
-   * `json_array_t`: The `Array` type
+   * `json_array_t`: The heterogenious `Array` type
      * `count`: Number of elements (as `size_t`)
      * `elements`: Array of `json_array_element_t` of `.count` size
    * `json_boolean_t`: The `Boolean` type (alias for `unsigned char`)
