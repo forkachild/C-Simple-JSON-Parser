@@ -1,74 +1,14 @@
 # Simple JSON Parser in C
 
+An easy to use, very fast JSON parsing implementation written in pure C
+
 ## Features
 
- * [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
+ * Fully [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
  * Simple 2 file library
  * Support for all data types
-   * `String`
-   * `Number`
-   * `Object`
-   * `Array`
-   * `Boolean`
-   * `Null` _(omitted from end result)_
- * Data types:
-   * `json_string_t`: The `String` type (alias for `const char *`)
-   * `json_number_t`: The `Number` type (alias for `double`)
-   * `json_object_t`: The `Object` type
-     * `count`: Number of entries (as `size_t`)
-     * `entries`: Array of `json_entry_t` of `.count` size
-   * `json_array_t`: The heterogenious `Array` type
-     * `count`: Number of elements (as `size_t`)
-     * `elements`: Array of `json_array_element_t` of `.count` size
-   * `json_boolean_t`: The `Boolean` type (alias for `unsigned char`)
-   * `json_type_t`: An **enum** of basic JSON type
-     * `JSON_TYPE_STRING`
-     * `JSON_TYPE_NUMBER`
-     * `JSON_TYPE_OBJECT`
-     * `JSON_TYPE_ARRAY`
-     * `JSON_TYPE_BOOLEAN`
-     * `JSON_TYPE_NULL` _(only as an indicator)_
-   * `json_value_t`: The JSON value **union** with easy to interpret fields
-     * `as_string`: As `json_string_t` value
-     * `as_number`: As `json_number_t` value
-     * `as_object`: As `json_object_t *` value
-     * `as_array`: As `json_array_t *` value
-     * `as_boolean`: As `json_boolean_t` value
-     * **Note**: The `null` type is not represented
-   * `json_entry_t`: The Key-Value entry (used in `json_object_t`)
-     * `key`: The key of the entry (as `json_string_t`)
-     * `type`: The type of data represented `.value` field (as `json_type_t`)
-     * `value`: The value of this entry (as `json_value_t`)
-   * `json_array_element_t`: A typed element of an array (used in `json_array_t`)
-     * `type`: The type of data represented by `.value` field (as `json_type_t`)
-     * `value`: The value of this element (as `json_value_t`)
- * **Value or Error** (Rust like) `result` type used throughout fallible calls
- * Recursive parsing
+ * Rust like `result` type used throughout fallible calls
  * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
-
-## API
-
-### Beautiful MACRO based types & results
-```C
-typed(json_element);  // Represents json_element_t
-result(json_element); // Represents json_element_result_t
-```
-### Parse JSON:
-```C
-result(json_element) json_parse(typed(json_string) json_str);
-```
-### Print JSON with specific indentation
-```C
-void json_print(typed(json_element) *element, int indent);
-```
-### Free JSON from memory
-```C
-void json_free(typed(json_element) *element);
-```
-### Convert error into user friendly error String
-```C
-typed(json_string) json_error_to_string(typed(json_error) error);
-```
 
 ## Setup
 
@@ -83,6 +23,138 @@ And in your code
 #include "json.h"
 ```
 
+## MACROs
+### The `typed` helper
+A uniform type system used throughout the API
+`typed(x)` is alias for `x_t`
+
+```C
+typed(json_element) // json_element_t
+```
+
+### Rust like `result`
+A tagged union comprising two variants, either `ok` with the data or `err` with `typed(json_error)` with simplified API to manage variants
+
+```C
+result(json_element) // json_element_result_t
+```
+
+## API
+
+### Parse JSON:
+```C
+result(json_element) json_parse(typed(json_string) json_str);
+```
+
+### Print JSON with specific indentation
+```C
+void json_print(typed(json_element) *element, int indent);
+```
+
+### Free JSON from memory
+```C
+void json_free(typed(json_element) *element);
+```
+
+### Convert error into user friendly error String
+```C
+typed(json_string) json_error_to_string(typed(json_error) error);
+```
+
+## Types
+### JSON String
+A null-terminated char-sequence
+```C
+typed(json_string) // alias for const char *
+```
+
+### JSON Number
+A 64-bit floating point number
+```C
+typed(json_number) // alias for double
+```
+
+### JSON Object
+An array of key-value entries
+```C
+typed(json_object)
+```
+#### Fields
+| **Name**  | **Type**              | **Description**       |
+|-----------|-----------------------|-----------------------|
+| `count`   | `typed(size)`         | The number of entries |
+| `entries` | `typed(json_entry) *` | The array of entries  |
+
+### JSON Array
+A hetergeneous array of elements
+```C
+typed(json_array)
+```
+#### Fields
+| **Name**   | **Type**                | **Description**        |
+|------------|-------------------------|------------------------|
+| `count`    | `typed(size)`           | The number of elements |
+| `elements` | `typed(json_element) *` | The array of elements  |
+
+### JSON Boolean
+A boolean value
+```C
+typed(json_boolean)
+```
+
+### Element
+A tagged union representing a JSON value with its type
+```C
+typed(json_element)
+```
+#### Fields
+| **Name** | **Type**                    | **Description**       |
+|----------|-----------------------------|-----------------------|
+| `type`   | `typed(json_element_type)`  | The type of the value |
+| `value`  | `typed(json_element_value)` | The actual value      |
+
+### Element Type
+An enum which represents a JSON type
+```C
+typed(json_element_type)
+```
+#### Variants
+| **Variant**                 | **Description** |
+|-----------------------------|-----------------|
+| `JSON_ELEMENT_TYPE_STRING`  | JSON String     |
+| `JSON_ELEMENT_TYPE_NUMBER`  | JSON Number     |
+| `JSON_ELEMENT_TYPE_OBJECT`  | JSON Object     |
+| `JSON_ELEMENT_TYPE_ARRAY`   | JSON Array      |
+| `JSON_ELEMENT_TYPE_BOOLEAN` | JSON Boolean    |
+| `JSON_ELEMENT_TYPE_NULL`    | JSON Null       |
+
+### Element Value
+A union for interpreting JSON data
+```C
+typed(json_element_value)
+```
+#### Fields
+| **Name**     | **Type**               | **Interpret data as** |
+|--------------|------------------------|-----------------------|
+| `as_string`  | `typed(json_string)`   | JSON String           |
+| `as_number`  | `typed(json_number)`   | JSON Number           |
+| `as_object`  | `typed(json_object) *` | JSON Object           |
+| `as_array`   | `typed(json_array) *`  | JSON Array            |
+| `as_boolean` | `typed(json_boolean)`  | JSON Boolean          |
+
+### Error
+An enum which represents an error
+```C
+typed(json_error)
+```
+#### Variants
+| **Variant**                | **Description**                |
+|----------------------------|--------------------------------|
+| `JSON_ERROR_EMPTY`         | Null or empty value            |
+| `JSON_ERROR_INVALID_TYPE`  | Type inference failed          |
+| `JSON_ERROR_INVALID_KEY`   | Key is not a valid string      |
+| `JSON_ERROR_INVALID_VALUE` | Value is not a valid JSON type |
+
 ## Usage
 
 ### Parse with error checking
@@ -94,16 +166,21 @@ const char * some_json_str = "{\"hello\":\"world\",\"key\":\"value\"}";
 
 int main() {
   result(json_element) element_result = json_parse(some_json_str);
+
+  // Guard if 
   if(result_is_err(json_element)(&element_result)) {
     typed(json_error) error = result_unwrap_err(json_element)(&element_result);
     fprintf(stderr, "Error parsing JSON: %s\n", json_error_to_string(error));
     return -1;
   }
+
+  // Extract the data
   typed(json_element) element = result_unwrap(json_element)(&element_result);
   // Use the element
   printf("Value is \"%s\"\n", element.value.as_object->entries[1].element.value.as_string);
   json_print(&element, 2);
   json_free(&element);
+
   return 0;
 }
 ```
@@ -134,8 +211,8 @@ At each Key-Value pair `typed(json_entry_t)`, there is a member `type`
 
 ...
 
-json_object_t *json = json_parse(some_json_string);
-json_entry_t entry = json->entries[0];
+typed(json_element) element = ...; // See example above
+typed(json_entry) entry = element->value.as_object->entries[0];
 
 switch(entry.type) {
   case JSON_TYPE_STRING:
@@ -158,7 +235,7 @@ switch(entry.type) {
 
 ### How to get the count of number of Key-Value pairs?
 
-In each `json_object_t`, there is a member `count`
+In each `typed(json_object)`, there is a member `count`
 
 ```C
 #include "json.h"
@@ -167,21 +244,22 @@ In each `json_object_t`, there is a member `count`
 
 int i;
 
-json_object_t *json = json_parse(some_json_string);
+typed(json_element) element = ...; // See example above
+typed(json_object) *obj = element->value.as_object;
 
-for(i = 0; i < json->count; i++) {
-  json_entry_t entry = json->entries[i];
+for(i = 0; i < obj->count; i++) {
+  typed(json_entry) entry = obj->entries[i];
 
-  json_string_t key = entry.key;
-  json_type_t type = entry.type;
-  json_value_t value = entry.value;
+  typed(json_string) key = entry.key;
+  typed(json_element_type) type = entry.type;
+  typed(json_element_value) value = entry.value;
   // Do something with `key`, `type` and `value`
 }
 ```
 
 ### How to get the number of elements in an array?
 
-In each `json_array_t`, there is a member `count`
+In each `typed(json_array)`, there is a member `count`
 
 ```C
 #include "json.h"
@@ -190,14 +268,14 @@ In each `json_array_t`, there is a member `count`
 
 int i;
 
-json_object_t *json = json_parse(some_json_string);
-json_array_t *array = json->entries[0].value.as_array;
+typed(json_element) element = ...; // See example above
+typed(json_array) *arr = element->value.as_array;
 
-for(i = 0; i < array->count; i++) {
-  json_array_element_t element = array->elements[i];
+for(i = 0; i < obj->count; i++) {
+  typed(json_element) element = obj->elements[i];
 
-  json_type_t type = element.type;
-  json_value_t value = element.value;
+  typed(json_element_type) type = element.type;
+  typed(json_element_value) value = element.value;
   // Do something with `value`
 }
 ```
@@ -205,9 +283,5 @@ for(i = 0; i < array->count; i++) {
 ### What if the JSON is poorly formatted with uneven whitespace
 
 Compile using `-DJSON_SCRAPE_WHITESPACE`
-
-### What if there is error in JSON
-
-That is when `json_parse` returns `NULL`
 
 ## If this helped you in any way you can [buy me a beer](https://www.paypal.me/suhelchakraborty)
