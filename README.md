@@ -3,10 +3,7 @@
 ## Features
 
  * [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
- * Simple interface
-   * `json_parse`: Parse a JSON string into a `json_object_t *`
-   * `json_print`: Print a `json_object_t *` using specified indentation
-   * `json_free`: Free a `json_object_t *` from memory
+ * Simple 2 file library
  * Support for all data types
    * `String`
    * `Number`
@@ -49,12 +46,35 @@
  * Recursive parsing
  * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
 
+## API
+
+### Beautiful MACRO based types & results
+```C
+typed(json_element);  // Represents json_element_t
+result(json_element); // Represents json_element_result_t
+```
+### Parse JSON:
+```C
+result(json_element) json_parse(typed(json_string) json_str);
+```
+### Print JSON with specific indentation
+```C
+void json_print(typed(json_element) *element, int indent);
+```
+### Free JSON from memory
+```C
+void json_free(typed(json_element) *element);
+```
+### Convert error into user friendly error String
+```C
+typed(json_string) json_error_to_string(typed(json_error) error);
+```
+
 ## Setup
 
 Copy the following from this repository in your source
 
  * `json.h`
- * `json_types.h`
  * `json.c`
 
 And in your code
@@ -63,74 +83,38 @@ And in your code
 #include "json.h"
 ```
 
-## Interface
+## Usage
 
-### Parse a JSON String
-
-```C
-// `json_string_t` is sugar for `const char *`
-json_object_t *json_parse(json_string_t json_str);
-```
-
-### Print a JSON Object
-
-```C
-void json_print(json_object_t *obj);
-```
-
-### Free a JSON Object from memory
-
-```C
-void json_free(json_object_t *obj);
-```
-
-## Guide
-
-### Single level parsing
+### Parse with error checking
 
 ```C
 #include "json.h"
 
-const char * some_json_string = "{\"hello\":\"world\",\"key\":\"value\"}";
+const char * some_json_str = "{\"hello\":\"world\",\"key\":\"value\"}";
 
 int main() {
-  json_object_t *json = json_parse(some_json_string);
-  printf("Count: %i\n", json->count);
-  printf("Key: %s\nValue: %s", json->entries[0].type, json->entries[0].value.as_string);
+  result(json_element) element_result = json_parse(some_json_str);
+  if(result_is_err(json_element)(&element_result)) {
+    typed(json_error) error = result_unwrap_err(json_element)(&element_result);
+    fprintf(stderr, "Error parsing JSON: %s\n", json_error_to_string(error));
+    return -1;
+  }
+  typed(json_element) element = result_unwrap(json_element)(&element_result);
+  // Use the element
+  printf("Value is \"%s\"\n", element.value.as_object->entries[1].element.value.as_string);
+  json_print(&element, 2);
+  json_free(&element);
   return 0;
 }
 ```
 Outputs
 
-```bash
-Count: 2
-Key: hello
-Value: world
 ```
-
-### Recursive Parsing
-
-```C
-#include "json.h"
-
-const char * complex_json = "{\"name\":{\"first\":\"John\",\"last\":\"Doe\"},\"age\":21.5}";
-
-int main() {
-  json_object_t *json = json_parse(complex_json);
-  json_object_t *name_json = json->entries[0].value.as_object;
-  printf("First name: %s\nLast name: %s\nAge: %f",
-    name_json->entries[0].value.as_string,
-    name_json->entries[1].value.as_string,
-    json->entries[1].value.as_number);
-  return 0;
+Value is "value"
+{
+  "hello": "world",
+  "key": "value"
 }
-```
-Outputs
-
-```bash
-First name: John
-Last name: Doe
-Age: 21.5
 ```
 
 ### Example in repository
@@ -143,7 +127,7 @@ Age: 21.5
 
 ### How to know the type?
 
-At each Key-Value pair `json_entry_t`, there is a member `type`
+At each Key-Value pair `typed(json_entry_t)`, there is a member `type`
 
 ```C
 #include "json.h"
