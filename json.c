@@ -450,7 +450,7 @@ void json_print_string(
 
 void json_print_number(
     typed(json_number) number) {
-    printf("\"%f\"", number);
+    printf("%f", number);
 }
 
 void json_print_object(
