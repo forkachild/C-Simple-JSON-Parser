@@ -27,20 +27,22 @@ const char *read_file(const char *path) {
 }
 
 int main() {
-    const char *json = read_file("../multidim_arr.json");
+    const char *json = read_file("../reddit.json");
     if (json == NULL) {
         return -1;
     }
 
-    json_object_t *object = json_parse(json);
+    result(json_element) element_result = json_parse(json);
     free((void *)json);
 
-    if (object == NULL) {
+    if (result_is_err(json_element)(&element_result)) {
+        typed(json_error) error = result_unwrap_err(json_element)(&element_result);
+        fprintf(stderr, "Error parsing JSON: %s\n", json_error_to_string(error));
         return -1;
     }
-
-    json_print(object, 2);
-    json_free(object);
+    typed(json_element) element = result_unwrap(json_element)(&element_result);
+    json_print(&element, 2);
+    json_free(&element);
 
     return 0;
 }
