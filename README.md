@@ -5,8 +5,9 @@ An easy to use, very fast JSON parsing implementation written in pure C
 ## Features
 
  * Fully [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
- * Simple 2 file library
+ * Small 2 file library
  * Support for all data types
+ * Simple and efficient hash table implementation to search element by key
  * Rust like `result` type used throughout fallible calls
  * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
 
@@ -46,7 +47,12 @@ result(json_element) // json_element_result_t
 result(json_element) json_parse(typed(json_string) json_str);
 ```
 
-### Print JSON with specific indentation
+### Find an element by key
+```C
+result(json_element) json_object_find(typed(json_object) * object, typed(json_string) key);
+```
+
+### Print JSON with specified indentation
 ```C
 void json_print(typed(json_element) *element, int indent);
 ```
@@ -176,8 +182,18 @@ int main() {
 
   // Extract the data
   typed(json_element) element = result_unwrap(json_element)(&element_result);
+
+  // Fetch the "hello" key value
+  result(json_element) hello_element_result = json_object_find(&element, "hello");
+  if(result_is_err(json_element)(&hello_element_result)) {
+    typed(json_error) error = result_unwrap_err(json_element)(&hello_element_result);
+    fprintf(stderr, "Error getting element \"hello\": %s\n", json_error_to_string(error));
+    return -1;
+  }
+  typed(json_element) hello_element = result_unwrap(json_element)(&hello_element_result);
+
   // Use the element
-  printf("Value is \"%s\"\n", element.value.as_object->entries[1].element.value.as_string);
+  printf("\"hello\": \"%s\"\n", hello_element.value.as_string);
   json_print(&element, 2);
   json_free(&element);
 
@@ -187,7 +203,7 @@ int main() {
 Outputs
 
 ```
-Value is "value"
+"hello": "world"
 {
   "hello": "world",
   "key": "value"
@@ -212,23 +228,23 @@ At each Key-Value pair `typed(json_entry_t)`, there is a member `type`
 ...
 
 typed(json_element) element = ...; // See example above
-typed(json_entry) entry = element->value.as_object->entries[0];
+typed(json_entry) entry = element.value.as_object->entries[0];
 
-switch(entry.type) {
+switch(entry.element.type) {
   case JSON_TYPE_STRING:
-    // `entry.value.as_string` is a `json_string_t`
+    // `entry.element.value.as_string` is a `json_string_t`
     break;
   case JSON_TYPE_NUMBER:
-    // `entry.value.as_number` is a `json_number_t`
+    // `entry.element.value.as_number` is a `json_number_t`
     break;
   case JSON_TYPE_OBJECT:
-    // `entry.value.as_object` is a `json_object_t *`
+    // `entry.element.value.as_object` is a `json_object_t *`
     break;
   case JSON_TYPE_ARRAY:
-    // `entry.value.as_array` is a `json_array_t *`
+    // `entry.element.value.as_array` is a `json_array_t *`
     break;
   case JSON_TYPE_BOOLEAN:
-    // `entry.value.as_boolean` is a `json_boolean_t`
+    // `entry.element.value.as_boolean` is a `json_boolean_t`
     break;
 }
 ```
@@ -245,14 +261,14 @@ In each `typed(json_object)`, there is a member `count`
 int i;
 
 typed(json_element) element = ...; // See example above
-typed(json_object) *obj = element->value.as_object;
+typed(json_object) *obj = element.value.as_object;
 
 for(i = 0; i < obj->count; i++) {
   typed(json_entry) entry = obj->entries[i];
 
   typed(json_string) key = entry.key;
-  typed(json_element_type) type = entry.type;
-  typed(json_element_value) value = entry.value;
+  typed(json_element_type) type = entry.element.type;
+  typed(json_element_value) value = entry.element.value;
   // Do something with `key`, `type` and `value`
 }
 ```
@@ -269,10 +285,10 @@ In each `typed(json_array)`, there is a member `count`
 int i;
 
 typed(json_element) element = ...; // See example above
-typed(json_array) *arr = element->value.as_array;
+typed(json_array) *arr = element.value.as_array;
 
-for(i = 0; i < obj->count; i++) {
-  typed(json_element) element = obj->elements[i];
+for(i = 0; i < arr->count; i++) {
+  typed(json_element) element = arr->elements[i];
 
   typed(json_element_type) type = element.type;
   typed(json_element_value) value = element.value;
