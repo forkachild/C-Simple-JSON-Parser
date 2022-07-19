@@ -51,16 +51,34 @@ static result(json_entry) json_parse_entry(typed(json_string) *);
  */
 static result(json_element_type) json_guess_element_type(typed(json_string));
 
+/**
+ * @brief Whether a token represents a string. Like '"'
+ */
 static bool json_is_string(char);
 
+/**
+ * @brief Whether a token represents a number. Like '0'
+ */
 static bool json_is_number(char);
 
+/**
+ * @brief Whether a token represents a object. Like '"'
+ */
 static bool json_is_object(char);
 
+/**
+ * @brief Whether a token represents a array. Like '['
+ */
 static bool json_is_array(char);
 
+/**
+ * @brief Whether a token represents a boolean. Like 't'
+ */
 static bool json_is_boolean(char);
 
+/**
+ * @brief Whether a token represents a null. Like 'n'
+ */
 static bool json_is_null(char);
 
 /**
@@ -227,6 +245,11 @@ static result(json_string)
  */
 static typed(size) json_string_len(typed(json_string));
 
+/**
+ * @brief Debug print some characters from a string
+ */
+static void json_debug_print(typed(json_string) str, typed(size) len);
+
 result(json_element) json_parse(typed(json_string) json_str) {
   if (json_str == NULL) {
     return result_err(json_element)(JSON_ERROR_EMPTY);
@@ -384,8 +407,8 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
   json_scrape_whitespace(&temp_str);
 
   if (*temp_str == '}') {
-    // Skip the end '}'
-    temp_str++;
+    // Skip the end '}' in the actual pointer
+    (*str_ptr) = temp_str + 1;
     return result_err(json_element_value)(JSON_ERROR_EMPTY);
   }
 
@@ -397,10 +420,7 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
 
     char prev = *temp_str;
     if (json_skip_entry(&temp_str)) {
-      //   log("Success %c %c", prev, *temp_str);
       count++;
-    } else if (*temp_str != '}' && *temp_str != ',') {
-      //   log("Failed %c %s", prev, temp_str);
     }
 
     // Skip any accidental whitespace
@@ -430,7 +450,6 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
   while (**str_ptr != '\0') {
     // Skip any accidental whitespace
     json_scrape_whitespace(str_ptr);
-
     result(json_entry) entry_result = json_parse_entry(str_ptr);
 
     if (result_is_ok(json_entry)(&entry_result)) {
@@ -746,6 +765,7 @@ void json_print(typed(json_element) * element, int indent) {
 
 void json_print_element(typed(json_element) * element, int indent,
                         int indent_level) {
+
   switch (element->type) {
   case JSON_ELEMENT_TYPE_STRING:
     json_print_string(element->value.as_string);
@@ -782,12 +802,9 @@ void json_print_object(typed(json_object) * object, int indent,
 
     typed(json_entry) *entry = object->entries[i];
 
-    if (entry != NULL) {
-      printf("\"%s\": ", entry->key);
-      json_print_element(&entry->element, indent, indent_level + 1);
-    } else {
-      printf("NULL");
-    }
+    json_print_string(entry->key);
+    printf(": ");
+    json_print_element(&entry->element, indent, indent_level + 1);
 
     if (i != object->count - 1)
       printf(",");
@@ -861,8 +878,6 @@ void json_free_object(typed(json_object) * object) {
     if (entry != NULL) {
       free((void *)entry->key);
       json_free(&entry->element);
-    } else {
-      log("Uh oh!");
     }
   }
 
@@ -981,6 +996,16 @@ result(json_string)
 
   output[offset] = '\0';
   return result_ok(json_string)((typed(json_string))output);
+}
+
+void json_debug_print(typed(json_string) str, typed(size) len) {
+  for (int i = 0; i < len; i++) {
+    if (str[i] == '\0')
+      break;
+
+    putchar(str[i]);
+  }
+  printf("\n");
 }
 
 define_result_type(json_element_type);

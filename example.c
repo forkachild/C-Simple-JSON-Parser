@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "json.h"
 
@@ -33,7 +34,13 @@ int main() {
     return -1;
   }
 
+  clock_t start, end;
+  start = clock();
   result(json_element) element_result = json_parse(json);
+  end = clock();
+
+  printf("Time taken %fs\n", (double)(end - start) / (double)CLOCKS_PER_SEC);
+
   free((void *)json);
 
   if (result_is_err(json_element)(&element_result)) {
