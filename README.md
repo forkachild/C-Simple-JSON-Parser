@@ -184,7 +184,7 @@ int main() {
   typed(json_element) element = result_unwrap(json_element)(&element_result);
 
   // Fetch the "hello" key value
-  result(json_element) hello_element_result = json_object_find(&element, "hello");
+  result(json_element) hello_element_result = json_object_find(&element.value.as_object, "hello");
   if(result_is_err(json_element)(&hello_element_result)) {
     typed(json_error) error = result_unwrap_err(json_element)(&hello_element_result);
     fprintf(stderr, "Error getting element \"hello\": %s\n", json_error_to_string(error));
