@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #ifdef JSON_SCRAPE_WHITESPACE
 #define json_scrape_whitespace(arg) json_skip_whitespace(arg)
@@ -336,7 +337,8 @@ result(json_element_type) json_guess_element_type(typed(json_string) str) {
 bool json_is_string(char ch) { return ch == '"'; }
 
 bool json_is_number(char ch) {
-  return (ch >= '0' && ch <= '9') || ch == '+' || ch == '-' || ch == '.';
+  return (ch >= '0' && ch <= '9') || ch == '+' || ch == '-' || ch == '.' ||
+         ch == 'e' || ch == 'E';
 }
 
 bool json_is_object(char ch) { return ch == '{'; }
@@ -388,13 +390,39 @@ result(json_element_value) json_parse_string(typed(json_string) * str_ptr) {
 }
 
 result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
+  typed(json_string) temp_str = *str_ptr;
+  bool has_decimal = false;
+
+  while(json_is_number(*temp_str)) {
+    if(*temp_str == '.') {
+      has_decimal = true;
+    }
+
+    temp_str++;
+  }
+
+  typed(json_number) number = {};
+
+if(has_decimal) {
   errno = 0;
-  typed(json_number) number = strtod(*str_ptr, (char **)str_ptr);
+
+  number.type = JSON_NUMBER_TYPE_DOUBLE;
+  number.value = (typed(json_number_value)) strtod(*str_ptr, (char **)str_ptr);
 
   if (errno == EINVAL || errno == ERANGE)
     return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
+} else {
+  errno = 0;
 
-  return result_ok(json_element_value)((typed(json_element_value))number);
+  number.type = JSON_NUMBER_TYPE_LONG;
+  number.value = (typed(json_number_value)) strtol(*str_ptr, (char **) str_ptr, 10);
+
+  if(errno == EINVAL || errno == ERANGE)
+    return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
+
+}
+
+return result_ok(json_element_value)((typed(json_element_value))number);
 }
 
 result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
@@ -790,7 +818,17 @@ void json_print_element(typed(json_element) * element, int indent,
 
 void json_print_string(typed(json_string) string) { printf("\"%s\"", string); }
 
-void json_print_number(typed(json_number) number) { printf("%f", number); }
+void json_print_number(typed(json_number) number) {
+  switch(number.type) {
+    case JSON_NUMBER_TYPE_DOUBLE:
+    printf("%f", number.value.as_double);
+    break;
+
+    case JSON_NUMBER_TYPE_LONG:
+    printf("%ld", number.value.as_long);
+    break;
+  }
+}
 
 void json_print_object(typed(json_object) * object, int indent,
                        int indent_level) {
