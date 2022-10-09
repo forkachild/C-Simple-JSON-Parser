@@ -12,8 +12,12 @@ typedef unsigned int bool;
 
 typedef const char *typed(json_string);
 typedef bool typed(json_boolean);
-typedef double typed(json_number);
 
+typedef enum json_number_type_e typed(json_number_type);
+typedef union json_number_value_u typed(json_number_value);
+typedef signed long typed(json_number_long);
+typedef double typed(json_number_double);
+typedef struct json_number_s typed(json_number);
 typedef enum json_element_type_e typed(json_element_type);
 typedef union json_element_value_u typed(json_element_value);
 typedef enum json_error_e typed(json_error);
@@ -92,6 +96,21 @@ enum json_element_type_e {
   JSON_ELEMENT_TYPE_ARRAY,
   JSON_ELEMENT_TYPE_BOOLEAN,
   JSON_ELEMENT_TYPE_NULL
+};
+
+enum json_number_type_e {
+  JSON_NUMBER_TYPE_LONG = 0,
+  JSON_NUMBER_TYPE_DOUBLE,
+};
+
+union json_number_value_u {
+  typed(json_number_long) as_long;
+  typed(json_number_double) as_double;
+};
+
+struct json_number_s {
+  typed(json_number_type) type;
+  typed(json_number_value) value;
 };
 
 union json_element_value_u {
