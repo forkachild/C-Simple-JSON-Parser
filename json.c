@@ -916,6 +916,7 @@ void json_free_object(typed(json_object) * object) {
     if (entry != NULL) {
       free((void *)entry->key);
       json_free(&entry->element);
+      free(entry);
     }
   }
 
