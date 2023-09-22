@@ -55,40 +55,6 @@ typedef struct json_array_s typed(json_array);
   typed(name) result_unwrap(name)(result(name) *);                             \
   typed(json_error) result_unwrap_err(name)(result(name) *);
 
-#define define_result_type(name)                                               \
-  result(name) result_ok(name)(typed(name) value) {                            \
-    result(name) retval = {                                                    \
-        .is_ok = true,                                                         \
-        .inner =                                                               \
-            {                                                                  \
-                .value = value,                                                \
-            },                                                                 \
-    };                                                                         \
-    return retval;                                                             \
-  }                                                                            \
-  result(name) result_err(name)(typed(json_error) err) {                       \
-    result(name) retval = {                                                    \
-        .is_ok = false,                                                        \
-        .inner =                                                               \
-            {                                                                  \
-                .err = err,                                                    \
-            },                                                                 \
-    };                                                                         \
-    return retval;                                                             \
-  }                                                                            \
-  typed(json_boolean) result_is_ok(name)(result(name) * result) {              \
-    return result->is_ok;                                                      \
-  }                                                                            \
-  typed(json_boolean) result_is_err(name)(result(name) * result) {             \
-    return !result->is_ok;                                                     \
-  }                                                                            \
-  typed(name) result_unwrap(name)(result(name) * result) {                     \
-    return result->inner.value;                                                \
-  }                                                                            \
-  typed(json_error) result_unwrap_err(name)(result(name) * result) {           \
-    return result->inner.err;                                                  \
-  }
-
 enum json_element_type_e {
   JSON_ELEMENT_TYPE_STRING = 0,
   JSON_ELEMENT_TYPE_NUMBER,

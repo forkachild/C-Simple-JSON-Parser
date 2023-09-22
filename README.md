@@ -4,19 +4,19 @@ An easy to use, very fast JSON parsing implementation written in pure C
 
 ## Features
 
- * Fully [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
- * Small 2 file library
- * Support for all data types
- * Simple and efficient hash table implementation to search element by key
- * Rust like `result` type used throughout fallible calls
- * Compile with `-DJSON_SCRAPE_WHITESPACE` to parse non-minified JSON with whitespace in between
+- Fully [RFC-8259](https://datatracker.ietf.org/doc/html/rfc8259) compliant
+- Small 2 file library
+- Support for all data types
+- Simple and efficient hash table implementation to search element by key
+- Rust like `result` type used throughout fallible calls
+- Compile with `-DJSON_SKIP_WHITESPACE` to parse non-minified JSON with whitespace in between
 
 ## Setup
 
 Copy the following from this repository in your source
 
- * `json.h`
- * `json.c`
+- `json.h`
+- `json.c`
 
 And in your code
 
@@ -25,7 +25,9 @@ And in your code
 ```
 
 ## MACROs
+
 ### The `typed` helper
+
 A uniform type system used throughout the API
 `typed(x)` is alias for `x_t`
 
@@ -34,6 +36,7 @@ typed(json_element) // json_element_t
 ```
 
 ### Rust like `result`
+
 A tagged union comprising two variants, either `ok` with the data or `err` with `typed(json_error)` with simplified API to manage variants
 
 ```C
@@ -43,90 +46,118 @@ result(json_element) // json_element_result_t
 ## API
 
 ### Parse JSON:
+
 ```C
 result(json_element) json_parse(typed(json_string) json_str);
 ```
 
 ### Find an element by key
+
 ```C
 result(json_element) json_object_find(typed(json_object) * object, typed(json_string) key);
 ```
 
 ### Print JSON with specified indentation
+
 ```C
 void json_print(typed(json_element) *element, int indent);
 ```
 
 ### Free JSON from memory
+
 ```C
 void json_free(typed(json_element) *element);
 ```
 
 ### Convert error into user friendly error String
+
 ```C
 typed(json_string) json_error_to_string(typed(json_error) error);
 ```
 
 ## Types
+
 ### JSON String
+
 A null-terminated char-sequence
+
 ```C
 typed(json_string) // alias for const char *
 ```
 
 ### JSON Number
+
 A 64-bit floating point number
+
 ```C
 typed(json_number) // alias for double
 ```
 
 ### JSON Object
+
 An array of key-value entries
+
 ```C
 typed(json_object)
 ```
+
 #### Fields
+
 | **Name**  | **Type**              | **Description**       |
-|-----------|-----------------------|-----------------------|
+| --------- | --------------------- | --------------------- |
 | `count`   | `typed(size)`         | The number of entries |
 | `entries` | `typed(json_entry) *` | The array of entries  |
 
 ### JSON Array
+
 A hetergeneous array of elements
+
 ```C
 typed(json_array)
 ```
+
 #### Fields
+
 | **Name**   | **Type**                | **Description**        |
-|------------|-------------------------|------------------------|
+| ---------- | ----------------------- | ---------------------- |
 | `count`    | `typed(size)`           | The number of elements |
 | `elements` | `typed(json_element) *` | The array of elements  |
 
 ### JSON Boolean
+
 A boolean value
+
 ```C
 typed(json_boolean)
 ```
 
 ### Element
+
 A tagged union representing a JSON value with its type
+
 ```C
 typed(json_element)
 ```
+
 #### Fields
+
 | **Name** | **Type**                    | **Description**       |
-|----------|-----------------------------|-----------------------|
+| -------- | --------------------------- | --------------------- |
 | `type`   | `typed(json_element_type)`  | The type of the value |
 | `value`  | `typed(json_element_value)` | The actual value      |
 
 ### Element Type
+
 An enum which represents a JSON type
+
 ```C
 typed(json_element_type)
 ```
+
 #### Variants
+
 | **Variant**                 | **Description** |
-|-----------------------------|-----------------|
+| --------------------------- | --------------- |
 | `JSON_ELEMENT_TYPE_STRING`  | JSON String     |
 | `JSON_ELEMENT_TYPE_NUMBER`  | JSON Number     |
 | `JSON_ELEMENT_TYPE_OBJECT`  | JSON Object     |
@@ -135,13 +166,17 @@ typed(json_element_type)
 | `JSON_ELEMENT_TYPE_NULL`    | JSON Null       |
 
 ### Element Value
+
 A union for interpreting JSON data
+
 ```C
 typed(json_element_value)
 ```
+
 #### Fields
+
 | **Name**     | **Type**               | **Interpret data as** |
-|--------------|------------------------|-----------------------|
+| ------------ | ---------------------- | --------------------- |
 | `as_string`  | `typed(json_string)`   | JSON String           |
 | `as_number`  | `typed(json_number)`   | JSON Number           |
 | `as_object`  | `typed(json_object) *` | JSON Object           |
@@ -149,13 +184,17 @@ typed(json_element_value)
 | `as_boolean` | `typed(json_boolean)`  | JSON Boolean          |
 
 ### Error
+
 An enum which represents an error
+
 ```C
 typed(json_error)
 ```
+
 #### Variants
+
 | **Variant**                | **Description**                |
-|----------------------------|--------------------------------|
+| -------------------------- | ------------------------------ |
 | `JSON_ERROR_EMPTY`         | Null or empty value            |
 | `JSON_ERROR_INVALID_TYPE`  | Type inference failed          |
 | `JSON_ERROR_INVALID_KEY`   | Key is not a valid string      |
@@ -173,7 +212,7 @@ const char * some_json_str = "{\"hello\":\"world\",\"key\":\"value\"}";
 int main() {
   result(json_element) element_result = json_parse(some_json_str);
 
-  // Guard if 
+  // Guard if
   if(result_is_err(json_element)(&element_result)) {
     typed(json_error) error = result_unwrap_err(json_element)(&element_result);
     fprintf(stderr, "Error parsing JSON: %s\n", json_error_to_string(error));
@@ -184,7 +223,7 @@ int main() {
   typed(json_element) element = result_unwrap(json_element)(&element_result);
 
   // Fetch the "hello" key value
-  result(json_element) hello_element_result = json_object_find(&element.value.as_object, "hello");
+  result(json_element) hello_element_result = json_object_find(element.value.as_object, "hello");
   if(result_is_err(json_element)(&hello_element_result)) {
     typed(json_error) error = result_unwrap_err(json_element)(&hello_element_result);
     fprintf(stderr, "Error getting element \"hello\": %s\n", json_error_to_string(error));
@@ -200,6 +239,7 @@ int main() {
   return 0;
 }
 ```
+
 Outputs
 
 ```
@@ -212,9 +252,9 @@ Outputs
 
 ### Example in repository
 
- 1. Clone this repository `git clone https://github.com/forkachild/C-Simple-JSON-Parser`
- 2. Compile the example `clang example.c json.c -o example.out`
- 3. Run the binary `./example.out`
+1.  Clone this repository `git clone https://github.com/forkachild/C-Simple-JSON-Parser`
+2.  Compile the example `clang example.c json.c -o example.out`
+3.  Run the binary `./example.out`
 
 ## FAQs
 
@@ -298,6 +338,6 @@ for(i = 0; i < arr->count; i++) {
 
 ### What if the JSON is poorly formatted with uneven whitespace
 
-Compile using `-DJSON_SCRAPE_WHITESPACE`
+Compile using `-DJSON_SKIP_WHITESPACE`
 
 ## If this helped you in any way you can [buy me a beer](https://www.paypal.me/suhelchakraborty)

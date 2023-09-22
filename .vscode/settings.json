@@ -1,6 +1,4 @@
 {
-  "[json]": {
-    "editor.formatOnSave": false
-  },
+  "editor.formatOnSave": true,
   "C_Cpp.clang_format_style": "LLVM"
 }
