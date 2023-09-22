@@ -1,15 +1,16 @@
 #include "json.h"
 
 #include <errno.h>
+#include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
-#ifdef JSON_SCRAPE_WHITESPACE
-#define json_scrape_whitespace(arg) json_skip_whitespace(arg)
+#ifdef JSON_SKIP_WHITESPACE
+#define json_skip_whitespace(arg) json_skip_whitespace_actual(arg)
 #else
-#define json_scrape_whitespace(arg)
+#define json_skip_whitespace(arg)
 #endif
 
 #ifdef JSON_DEBUG
@@ -17,6 +18,40 @@
 #else
 #define log(str, ...)
 #endif
+
+#define define_result_type(name)                                               \
+  result(name) result_ok(name)(typed(name) value) {                            \
+    result(name) retval = {                                                    \
+        .is_ok = true,                                                         \
+        .inner =                                                               \
+            {                                                                  \
+                .value = value,                                                \
+            },                                                                 \
+    };                                                                         \
+    return retval;                                                             \
+  }                                                                            \
+  result(name) result_err(name)(typed(json_error) err) {                       \
+    result(name) retval = {                                                    \
+        .is_ok = false,                                                        \
+        .inner =                                                               \
+            {                                                                  \
+                .err = err,                                                    \
+            },                                                                 \
+    };                                                                         \
+    return retval;                                                             \
+  }                                                                            \
+  typed(json_boolean) result_is_ok(name)(result(name) * result) {              \
+    return result->is_ok;                                                      \
+  }                                                                            \
+  typed(json_boolean) result_is_err(name)(result(name) * result) {             \
+    return !result->is_ok;                                                     \
+  }                                                                            \
+  typed(name) result_unwrap(name)(result(name) * result) {                     \
+    return result->inner.value;                                                \
+  }                                                                            \
+  typed(json_error) result_unwrap_err(name)(result(name) * result) {           \
+    return result->inner.err;                                                  \
+  }
 
 /**
  * @brief Allocate `count` number of items of `type` in memory
@@ -182,7 +217,7 @@ static bool json_skip_boolean(typed(json_string) *);
 /**
  * @brief Moves a JSON string pointer beyond any whitespace
  */
-static void json_skip_whitespace(typed(json_string) *);
+static void json_skip_whitespace_actual(typed(json_string) *);
 
 /**
  * @brief Moves a JSON string pointer beyond `null` literal
@@ -276,12 +311,12 @@ result(json_element) json_parse(typed(json_string) json_str) {
 
 result(json_entry) json_parse_entry(typed(json_string) * str_ptr) {
   result_try(json_entry, json_element_value, key, json_parse_string(str_ptr));
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   // Skip the ':' delimiter
   (*str_ptr)++;
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   result(json_element_type) type_result = json_guess_element_type(*str_ptr);
   if (result_is_err(json_element_type)(&type_result)) {
@@ -366,6 +401,8 @@ result(json_element_value)
   case JSON_ELEMENT_TYPE_NULL:
     json_skip_null(str_ptr);
     return result_err(json_element_value)(JSON_ERROR_EMPTY);
+  default:
+    return result_err(json_element_value)(JSON_ERROR_INVALID_TYPE);
   }
 }
 
@@ -393,8 +430,8 @@ result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
   typed(json_string) temp_str = *str_ptr;
   bool has_decimal = false;
 
-  while(json_is_number(*temp_str)) {
-    if(*temp_str == '.') {
+  while (json_is_number(*temp_str)) {
+    if (*temp_str == '.') {
       has_decimal = true;
     }
 
@@ -403,26 +440,26 @@ result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
 
   typed(json_number) number = {};
 
-if(has_decimal) {
-  errno = 0;
+  if (has_decimal) {
+    errno = 0;
 
-  number.type = JSON_NUMBER_TYPE_DOUBLE;
-  number.value = (typed(json_number_value)) strtod(*str_ptr, (char **)str_ptr);
+    number.type = JSON_NUMBER_TYPE_DOUBLE;
+    number.value = (typed(json_number_value))strtod(*str_ptr, (char **)str_ptr);
 
-  if (errno == EINVAL || errno == ERANGE)
-    return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
-} else {
-  errno = 0;
+    if (errno == EINVAL || errno == ERANGE)
+      return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
+  } else {
+    errno = 0;
 
-  number.type = JSON_NUMBER_TYPE_LONG;
-  number.value = (typed(json_number_value)) strtol(*str_ptr, (char **) str_ptr, 10);
+    number.type = JSON_NUMBER_TYPE_LONG;
+    number.value =
+        (typed(json_number_value))strtol(*str_ptr, (char **)str_ptr, 10);
 
-  if(errno == EINVAL || errno == ERANGE)
-    return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
+    if (errno == EINVAL || errno == ERANGE)
+      return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
+  }
 
-}
-
-return result_ok(json_element_value)((typed(json_element_value))number);
+  return result_ok(json_element_value)((typed(json_element_value))number);
 }
 
 result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
@@ -432,7 +469,7 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
   // Skip the first '{' character
   temp_str++;
 
-  json_scrape_whitespace(&temp_str);
+  json_skip_whitespace(&temp_str);
 
   if (*temp_str == '}') {
     // Skip the end '}' in the actual pointer
@@ -444,15 +481,15 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
 
   while (*temp_str != '\0') {
     // Skip any accidental whitespace
-    json_scrape_whitespace(&temp_str);
+    json_skip_whitespace(&temp_str);
 
-    char prev = *temp_str;
+    // If the entry could be skipped
     if (json_skip_entry(&temp_str)) {
       count++;
     }
 
     // Skip any accidental whitespace
-    json_scrape_whitespace(&temp_str);
+    json_skip_whitespace(&temp_str);
 
     if (*temp_str == '}')
       break;
@@ -467,17 +504,17 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
   // ******* Initialize the hash map *******
   // Now we have a perfectly sized hash map
   typed(json_entry) **entries = allocN(typed(json_entry) *, count);
-  for (int i = 0; i < count; i++)
+  for (size_t i = 0; i < count; i++)
     entries[i] = NULL;
 
   // Skip the first '{' character
   (*str_ptr)++;
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   while (**str_ptr != '\0') {
     // Skip any accidental whitespace
-    json_scrape_whitespace(str_ptr);
+    json_skip_whitespace(str_ptr);
     result(json_entry) entry_result = json_parse_entry(str_ptr);
 
     if (result_is_ok(json_entry)(&entry_result)) {
@@ -486,7 +523,7 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
 
       // Bucket size is exactly count. So there will be at max
       // count misses in the worst case
-      for (int i = 0; i < count; i++) {
+      for (size_t i = 0; i < count; i++) {
         if (entries[bucket] == NULL) {
           typed(json_entry) *temp_entry = alloc(typed(json_entry));
           memcpy(temp_entry, &entry, sizeof(typed(json_entry)));
@@ -499,7 +536,7 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
     }
 
     // Skip any accidental whitespace
-    json_scrape_whitespace(str_ptr);
+    json_skip_whitespace(str_ptr);
 
     if (**str_ptr == '}')
       break;
@@ -531,7 +568,7 @@ result(json_element_value) json_parse_array(typed(json_string) * str_ptr) {
   // Skip the starting '[' character
   (*str_ptr)++;
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   // Unfortunately the array is empty
   if (**str_ptr == ']') {
@@ -544,7 +581,7 @@ result(json_element_value) json_parse_array(typed(json_string) * str_ptr) {
   typed(json_element) *elements = NULL;
 
   while (**str_ptr != '\0') {
-    json_scrape_whitespace(str_ptr);
+    json_skip_whitespace(str_ptr);
 
     // Guess the type
     result(json_element_type) type_result = json_guess_element_type(*str_ptr);
@@ -565,7 +602,7 @@ result(json_element_value) json_parse_array(typed(json_string) * str_ptr) {
         elements[count - 1].value = value;
       }
 
-      json_scrape_whitespace(str_ptr);
+      json_skip_whitespace(str_ptr);
     }
 
     // Reached the end
@@ -616,7 +653,7 @@ result(json_element)
 
   // Bucket size is exactly obj->count. So there will be at max
   // obj->count misses in the worst case
-  for (int i = 0; i < obj->count; i++) {
+  for (size_t i = 0; i < obj->count; i++) {
     typed(json_entry) *entry = obj->entries[bucket];
     if (strcmp(key, entry->key) == 0)
       return result_ok(json_element)(entry->element);
@@ -630,12 +667,12 @@ result(json_element)
 bool json_skip_entry(typed(json_string) * str_ptr) {
   json_skip_string(str_ptr);
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   // Skip the ':' delimiter
   (*str_ptr)++;
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   result(json_element_type) type_result = json_guess_element_type(*str_ptr);
   if (result_is_err(json_element_type)(&type_result))
@@ -694,7 +731,7 @@ bool json_skip_object(typed(json_string) * str_ptr) {
   // Skip the first '{' character
   (*str_ptr)++;
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   if (**str_ptr == '}') {
     // Skip the end '}'
@@ -704,12 +741,12 @@ bool json_skip_object(typed(json_string) * str_ptr) {
 
   while (**str_ptr != '\0') {
     // Skip any accidental whitespace
-    json_scrape_whitespace(str_ptr);
+    json_skip_whitespace(str_ptr);
 
     json_skip_entry(str_ptr);
 
     // Skip any accidental whitespace
-    json_scrape_whitespace(str_ptr);
+    json_skip_whitespace(str_ptr);
 
     if (**str_ptr == '}')
       break;
@@ -728,7 +765,7 @@ bool json_skip_array(typed(json_string) * str_ptr) {
   // Skip the starting '[' character
   (*str_ptr)++;
 
-  json_scrape_whitespace(str_ptr);
+  json_skip_whitespace(str_ptr);
 
   // Unfortunately the array is empty
   if (**str_ptr == ']') {
@@ -738,7 +775,7 @@ bool json_skip_array(typed(json_string) * str_ptr) {
   }
 
   while (**str_ptr != '\0') {
-    json_scrape_whitespace(str_ptr);
+    json_skip_whitespace(str_ptr);
 
     // Guess the type
     result(json_element_type) type_result = json_guess_element_type(*str_ptr);
@@ -749,7 +786,7 @@ bool json_skip_array(typed(json_string) * str_ptr) {
       // Parse the value based on guessed type
       json_skip_element_value(str_ptr, type);
 
-      json_scrape_whitespace(str_ptr);
+      json_skip_whitespace(str_ptr);
     }
 
     // Reached the end
@@ -780,7 +817,7 @@ bool json_skip_boolean(typed(json_string) * str_ptr) {
   return false;
 }
 
-void json_skip_whitespace(typed(json_string) * str_ptr) {
+void json_skip_whitespace_actual(typed(json_string) * str_ptr) {
   while (is_whitespace(**str_ptr))
     (*str_ptr)++;
 }
@@ -819,12 +856,12 @@ void json_print_element(typed(json_element) * element, int indent,
 void json_print_string(typed(json_string) string) { printf("\"%s\"", string); }
 
 void json_print_number(typed(json_number) number) {
-  switch(number.type) {
-    case JSON_NUMBER_TYPE_DOUBLE:
+  switch (number.type) {
+  case JSON_NUMBER_TYPE_DOUBLE:
     printf("%f", number.value.as_double);
     break;
 
-    case JSON_NUMBER_TYPE_LONG:
+  case JSON_NUMBER_TYPE_LONG:
     printf("%ld", number.value.as_long);
     break;
   }
@@ -834,7 +871,7 @@ void json_print_object(typed(json_object) * object, int indent,
                        int indent_level) {
   printf("{\n");
 
-  for (int i = 0; i < object->count; i++) {
+  for (size_t i = 0; i < object->count; i++) {
     for (int j = 0; j < indent * (indent_level + 1); j++)
       printf(" ");
 
@@ -857,7 +894,7 @@ void json_print_object(typed(json_object) * object, int indent,
 void json_print_array(typed(json_array) * array, int indent, int indent_level) {
   printf("[\n");
 
-  for (int i = 0; i < array->count; i++) {
+  for (size_t i = 0; i < array->count; i++) {
     typed(json_element) element = array->elements[i];
     for (int j = 0; j < indent * (indent_level + 1); j++)
       printf(" ");
@@ -910,12 +947,13 @@ void json_free_object(typed(json_object) * object) {
     return;
   }
 
-  for (int i = 0; i < object->count; i++) {
+  for (size_t i = 0; i < object->count; i++) {
     typed(json_entry) *entry = object->entries[i];
 
     if (entry != NULL) {
       free((void *)entry->key);
       json_free(&entry->element);
+      free(entry);
     }
   }
 
@@ -933,7 +971,7 @@ void json_free_array(typed(json_array) * array) {
   }
 
   // Recursively free each element in the array
-  for (int i = 0; i < array->count; i++) {
+  for (size_t i = 0; i < array->count; i++) {
     typed(json_element) element = array->elements[i];
     json_free(&element);
   }
@@ -983,7 +1021,7 @@ result(json_string)
   typed(size) count = 0;
   typed(json_string) iter = str;
 
-  while (iter - str < len) {
+  while ((size_t)(iter - str) < len) {
     if (*iter == '\\')
       iter++;
 
@@ -995,7 +1033,7 @@ result(json_string)
   typed(size) offset = 0;
   iter = str;
 
-  while (iter - str < len) {
+  while ((size_t)(iter - str) < len) {
     if (*iter == '\\') {
       iter++;
 
@@ -1037,7 +1075,7 @@ result(json_string)
 }
 
 void json_debug_print(typed(json_string) str, typed(size) len) {
-  for (int i = 0; i < len; i++) {
+  for (size_t i = 0; i < len; i++) {
     if (str[i] == '\0')
       break;
 
