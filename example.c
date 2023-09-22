@@ -49,7 +49,6 @@ int main() {
     return -1;
   }
   typed(json_element) element = result_unwrap(json_element)(&element_result);
-  typed(json_object) *obj = element.value.as_object;
 
   // json_print(&element, 2);
   json_free(&element);
