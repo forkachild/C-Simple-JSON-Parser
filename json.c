@@ -445,7 +445,7 @@ result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
     temp_str++;
   }
 
-  typed(json_number) number = {};
+  typed(json_number) number = {0};
 
   if (has_decimal) {
     errno = 0;
