@@ -114,12 +114,12 @@ enum json_error_e {
   JSON_ERROR_INVALID_VALUE
 };
 
-declare_result_type(json_element_type);
-declare_result_type(json_element_value);
-declare_result_type(json_element);
-declare_result_type(json_entry);
-declare_result_type(json_string);
-declare_result_type(size);
+declare_result_type(json_element_type)
+declare_result_type(json_element_value)
+declare_result_type(json_element)
+declare_result_type(json_entry)
+declare_result_type(json_string)
+declare_result_type(size)
 
 /**
  * @brief Parses a JSON string into a JSON element {json_element_t}

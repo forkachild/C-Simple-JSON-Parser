@@ -1076,10 +1076,10 @@ result(json_string)
   return result_ok(json_string)((typed(json_string))output);
 }
 
-define_result_type(json_element_type);
-define_result_type(json_element_value);
-define_result_type(json_element);
-define_result_type(json_entry);
-define_result_type(json_string);
-define_result_type(size);
+define_result_type(json_element_type)
+define_result_type(json_element_value)
+define_result_type(json_element)
+define_result_type(json_entry)
+define_result_type(json_string)
+define_result_type(size)
 
