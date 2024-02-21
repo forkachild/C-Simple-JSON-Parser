@@ -28,7 +28,7 @@ const char *read_file(const char *path) {
   return (const char *)buffer;
 }
 
-int main() {
+int main(void) {
   const char *json = read_file("../sample/reddit.json");
   if (json == NULL) {
     return -1;
