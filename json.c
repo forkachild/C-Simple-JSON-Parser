@@ -430,7 +430,10 @@ result(json_element_value) json_parse_string(typed(json_string) * str_ptr) {
   // Skip to beyond the string
   (*str_ptr) += len + 1;
 
-  return result_ok(json_element_value)((typed(json_element_value))output);
+  typed(json_element_value) retval = {0};
+  retval.as_string = output;
+
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
@@ -446,27 +449,34 @@ result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
   }
 
   typed(json_number) number = {0};
+  typed(json_number_value) val = {0};
 
   if (has_decimal) {
     errno = 0;
 
+    val.as_double = strtod(*str_ptr, (char **)str_ptr);
+
     number.type = JSON_NUMBER_TYPE_DOUBLE;
-    number.value = (typed(json_number_value))strtod(*str_ptr, (char **)str_ptr);
+    number.value = val;
 
     if (errno == EINVAL || errno == ERANGE)
       return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
   } else {
     errno = 0;
 
+    val.as_long = strtol(*str_ptr, (char **)str_ptr, 10);
+
     number.type = JSON_NUMBER_TYPE_LONG;
-    number.value =
-        (typed(json_number_value))strtol(*str_ptr, (char **)str_ptr, 10);
+    number.value = val;
 
     if (errno == EINVAL || errno == ERANGE)
       return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
   }
 
-  return result_ok(json_element_value)((typed(json_element_value))number);
+  typed(json_element_value) retval = {0};
+  retval.as_number = number;
+
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
@@ -559,7 +569,10 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
   object->count = count;
   object->entries = entries;
 
-  return result_ok(json_element_value)((typed(json_element_value))object);
+  typed(json_element_value) retval = {0};
+  retval.as_object = object;
+
+  return result_ok(json_element_value)(retval);
 }
 
 typed(uint64) json_key_hash(typed(json_string) str) {
@@ -630,7 +643,10 @@ result(json_element_value) json_parse_array(typed(json_string) * str_ptr) {
   array->count = count;
   array->elements = elements;
 
-  return result_ok(json_element_value)((typed(json_element_value))array);
+  typed(json_element_value) retval = {0};
+  retval.as_array = array;
+
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element_value) json_parse_boolean(typed(json_string) * str_ptr) {
@@ -647,8 +663,11 @@ result(json_element_value) json_parse_boolean(typed(json_string) * str_ptr) {
     (*str_ptr) += 5;
     break;
   }
+  
+  typed(json_element_value) retval = {0};
+  retval.as_boolean = output;
 
-  return result_ok(json_element_value)((typed(json_element_value))output);
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element)
