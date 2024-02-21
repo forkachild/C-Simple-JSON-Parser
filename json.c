@@ -7,14 +7,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief Determines whether a character `ch` is whitespace
+ */
+#define is_whitespace(ch) (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t')
+
 #ifdef JSON_SKIP_WHITESPACE
-#define json_skip_whitespace(arg) json_skip_whitespace_actual(arg)
+void json_skip_whitespace(typed(json_string) * str_ptr) {
+  while (is_whitespace(**str_ptr))
+    (*str_ptr)++;
+}
 #else
 #define json_skip_whitespace(arg)
 #endif
 
 #ifdef JSON_DEBUG
 #define log(str, ...) printf(str "\n", ##__VA_ARGS__)
+void json_debug_print(typed(json_string) str, typed(size) len) {
+  for (size_t i = 0; i < len; i++) {
+    if (str[i] == '\0')
+      break;
+
+    putchar(str[i]);
+  }
+  printf("\n");
+}
 #else
 #define log(str, ...)
 #endif
@@ -70,11 +87,6 @@
  * and return the pointer to the newly allocated memory
  */
 #define reallocN(ptr, type, count) (type *)realloc(ptr, (count) * sizeof(type))
-
-/**
- * @brief Determines whether a character `ch` is whitespace
- */
-#define is_whitespace(ch) (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t')
 
 /**
  * @brief Parses a JSON element {json_element_t} and moves the string
@@ -217,7 +229,7 @@ static bool json_skip_boolean(typed(json_string) *);
 /**
  * @brief Moves a JSON string pointer beyond any whitespace
  */
-static void json_skip_whitespace_actual(typed(json_string) *);
+// static void json_skip_whitespace_actual(typed(json_string) *);
 
 /**
  * @brief Moves a JSON string pointer beyond `null` literal
@@ -280,11 +292,6 @@ static result(json_string)
  * @brief Offset to the last `"` of a JSON string
  */
 static typed(size) json_string_len(typed(json_string));
-
-/**
- * @brief Debug print some characters from a string
- */
-static void json_debug_print(typed(json_string) str, typed(size) len);
 
 result(json_element) json_parse(typed(json_string) json_str) {
   if (json_str == NULL) {
@@ -817,11 +824,6 @@ bool json_skip_boolean(typed(json_string) * str_ptr) {
   return false;
 }
 
-void json_skip_whitespace_actual(typed(json_string) * str_ptr) {
-  while (is_whitespace(**str_ptr))
-    (*str_ptr)++;
-}
-
 void json_skip_null(typed(json_string) * str_ptr) { (*str_ptr) += 4; }
 
 void json_print(typed(json_element) * element, int indent) {
@@ -1074,19 +1076,10 @@ result(json_string)
   return result_ok(json_string)((typed(json_string))output);
 }
 
-void json_debug_print(typed(json_string) str, typed(size) len) {
-  for (size_t i = 0; i < len; i++) {
-    if (str[i] == '\0')
-      break;
-
-    putchar(str[i]);
-  }
-  printf("\n");
-}
-
 define_result_type(json_element_type);
 define_result_type(json_element_value);
 define_result_type(json_element);
 define_result_type(json_entry);
 define_result_type(json_string);
 define_result_type(size);
+
