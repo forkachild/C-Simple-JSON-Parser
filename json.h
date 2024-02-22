@@ -13,14 +13,11 @@ typedef unsigned int bool;
 typedef const char *typed(json_string);
 typedef bool typed(json_boolean);
 
-typedef enum json_number_type_e typed(json_number_type);
 typedef union json_number_value_u typed(json_number_value);
 typedef signed long typed(json_number_long);
 typedef double typed(json_number_double);
 typedef struct json_number_s typed(json_number);
-typedef enum json_element_type_e typed(json_element_type);
 typedef union json_element_value_u typed(json_element_value);
-typedef enum json_error_e typed(json_error);
 typedef struct json_element_s typed(json_element);
 typedef struct json_entry_s typed(json_entry);
 typedef struct json_object_s typed(json_object);
@@ -55,19 +52,19 @@ typedef struct json_array_s typed(json_array);
   typed(name) result_unwrap(name)(result(name) *);                             \
   typed(json_error) result_unwrap_err(name)(result(name) *);
 
-enum json_element_type_e {
+typedef enum json_element_type_e {
   JSON_ELEMENT_TYPE_STRING = 0,
   JSON_ELEMENT_TYPE_NUMBER,
   JSON_ELEMENT_TYPE_OBJECT,
   JSON_ELEMENT_TYPE_ARRAY,
   JSON_ELEMENT_TYPE_BOOLEAN,
   JSON_ELEMENT_TYPE_NULL
-};
+} typed(json_element_type);
 
-enum json_number_type_e {
+typedef enum json_number_type_e {
   JSON_NUMBER_TYPE_LONG = 0,
   JSON_NUMBER_TYPE_DOUBLE,
-};
+} typed(json_number_type);
 
 union json_number_value_u {
   typed(json_number_long) as_long;
@@ -107,19 +104,19 @@ struct json_array_s {
   typed(json_element) * elements;
 };
 
-enum json_error_e {
+typedef enum json_error_e {
   JSON_ERROR_EMPTY = 0,
   JSON_ERROR_INVALID_TYPE,
   JSON_ERROR_INVALID_KEY,
   JSON_ERROR_INVALID_VALUE
-};
+} typed(json_error);
 
-declare_result_type(json_element_type);
-declare_result_type(json_element_value);
-declare_result_type(json_element);
-declare_result_type(json_entry);
-declare_result_type(json_string);
-declare_result_type(size);
+declare_result_type(json_element_type)
+declare_result_type(json_element_value)
+declare_result_type(json_element)
+declare_result_type(json_entry)
+declare_result_type(json_string)
+declare_result_type(size)
 
 /**
  * @brief Parses a JSON string into a JSON element {json_element_t}
@@ -163,3 +160,4 @@ void json_free(typed(json_element) * element);
  * @return The string representation
  */
 typed(json_string) json_error_to_string(typed(json_error) error);
+

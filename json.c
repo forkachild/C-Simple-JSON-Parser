@@ -7,14 +7,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief Determines whether a character `ch` is whitespace
+ */
+#define is_whitespace(ch) (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t')
+
 #ifdef JSON_SKIP_WHITESPACE
-#define json_skip_whitespace(arg) json_skip_whitespace_actual(arg)
+void json_skip_whitespace(typed(json_string) * str_ptr) {
+  while (is_whitespace(**str_ptr))
+    (*str_ptr)++;
+}
 #else
 #define json_skip_whitespace(arg)
 #endif
 
 #ifdef JSON_DEBUG
 #define log(str, ...) printf(str "\n", ##__VA_ARGS__)
+void json_debug_print(typed(json_string) str, typed(size) len) {
+  for (size_t i = 0; i < len; i++) {
+    if (str[i] == '\0')
+      break;
+
+    putchar(str[i]);
+  }
+  printf("\n");
+}
 #else
 #define log(str, ...)
 #endif
@@ -70,11 +87,6 @@
  * and return the pointer to the newly allocated memory
  */
 #define reallocN(ptr, type, count) (type *)realloc(ptr, (count) * sizeof(type))
-
-/**
- * @brief Determines whether a character `ch` is whitespace
- */
-#define is_whitespace(ch) (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t')
 
 /**
  * @brief Parses a JSON element {json_element_t} and moves the string
@@ -217,7 +229,7 @@ static bool json_skip_boolean(typed(json_string) *);
 /**
  * @brief Moves a JSON string pointer beyond any whitespace
  */
-static void json_skip_whitespace_actual(typed(json_string) *);
+// static void json_skip_whitespace_actual(typed(json_string) *);
 
 /**
  * @brief Moves a JSON string pointer beyond `null` literal
@@ -280,11 +292,6 @@ static result(json_string)
  * @brief Offset to the last `"` of a JSON string
  */
 static typed(size) json_string_len(typed(json_string));
-
-/**
- * @brief Debug print some characters from a string
- */
-static void json_debug_print(typed(json_string) str, typed(size) len);
 
 result(json_element) json_parse(typed(json_string) json_str) {
   if (json_str == NULL) {
@@ -423,7 +430,10 @@ result(json_element_value) json_parse_string(typed(json_string) * str_ptr) {
   // Skip to beyond the string
   (*str_ptr) += len + 1;
 
-  return result_ok(json_element_value)((typed(json_element_value))output);
+  typed(json_element_value) retval = {0};
+  retval.as_string = output;
+
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
@@ -438,28 +448,35 @@ result(json_element_value) json_parse_number(typed(json_string) * str_ptr) {
     temp_str++;
   }
 
-  typed(json_number) number = {};
+  typed(json_number) number = {0};
+  typed(json_number_value) val = {0};
 
   if (has_decimal) {
     errno = 0;
 
+    val.as_double = strtod(*str_ptr, (char **)str_ptr);
+
     number.type = JSON_NUMBER_TYPE_DOUBLE;
-    number.value = (typed(json_number_value))strtod(*str_ptr, (char **)str_ptr);
+    number.value = val;
 
     if (errno == EINVAL || errno == ERANGE)
       return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
   } else {
     errno = 0;
 
+    val.as_long = strtol(*str_ptr, (char **)str_ptr, 10);
+
     number.type = JSON_NUMBER_TYPE_LONG;
-    number.value =
-        (typed(json_number_value))strtol(*str_ptr, (char **)str_ptr, 10);
+    number.value = val;
 
     if (errno == EINVAL || errno == ERANGE)
       return result_err(json_element_value)(JSON_ERROR_INVALID_VALUE);
   }
 
-  return result_ok(json_element_value)((typed(json_element_value))number);
+  typed(json_element_value) retval = {0};
+  retval.as_number = number;
+
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
@@ -552,7 +569,10 @@ result(json_element_value) json_parse_object(typed(json_string) * str_ptr) {
   object->count = count;
   object->entries = entries;
 
-  return result_ok(json_element_value)((typed(json_element_value))object);
+  typed(json_element_value) retval = {0};
+  retval.as_object = object;
+
+  return result_ok(json_element_value)(retval);
 }
 
 typed(uint64) json_key_hash(typed(json_string) str) {
@@ -623,7 +643,10 @@ result(json_element_value) json_parse_array(typed(json_string) * str_ptr) {
   array->count = count;
   array->elements = elements;
 
-  return result_ok(json_element_value)((typed(json_element_value))array);
+  typed(json_element_value) retval = {0};
+  retval.as_array = array;
+
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element_value) json_parse_boolean(typed(json_string) * str_ptr) {
@@ -640,8 +663,11 @@ result(json_element_value) json_parse_boolean(typed(json_string) * str_ptr) {
     (*str_ptr) += 5;
     break;
   }
+  
+  typed(json_element_value) retval = {0};
+  retval.as_boolean = output;
 
-  return result_ok(json_element_value)((typed(json_element_value))output);
+  return result_ok(json_element_value)(retval);
 }
 
 result(json_element)
@@ -815,11 +841,6 @@ bool json_skip_boolean(typed(json_string) * str_ptr) {
   }
 
   return false;
-}
-
-void json_skip_whitespace_actual(typed(json_string) * str_ptr) {
-  while (is_whitespace(**str_ptr))
-    (*str_ptr)++;
 }
 
 void json_skip_null(typed(json_string) * str_ptr) { (*str_ptr) += 4; }
@@ -1074,19 +1095,10 @@ result(json_string)
   return result_ok(json_string)((typed(json_string))output);
 }
 
-void json_debug_print(typed(json_string) str, typed(size) len) {
-  for (size_t i = 0; i < len; i++) {
-    if (str[i] == '\0')
-      break;
+define_result_type(json_element_type)
+define_result_type(json_element_value)
+define_result_type(json_element)
+define_result_type(json_entry)
+define_result_type(json_string)
+define_result_type(size)
 
-    putchar(str[i]);
-  }
-  printf("\n");
-}
-
-define_result_type(json_element_type);
-define_result_type(json_element_value);
-define_result_type(json_element);
-define_result_type(json_entry);
-define_result_type(json_string);
-define_result_type(size);
